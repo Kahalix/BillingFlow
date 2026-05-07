@@ -1,0 +1,33 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        # GitHub Actions will automatically read the SDK version from global.json
+        global-json-file: global.json
+
+    - name: Restore dependencies
+      run: dotnet restore BillingFlow.sln
+
+    - name: Build solution
+      # Enforce Release mode and skip restore (already done in the previous step)
+      run: dotnet build BillingFlow.sln -c Release --no-restore
+
+    - name: Run tests
+      # Execute all tests within the solution without rebuilding
+      run: dotnet test BillingFlow.sln -c Release --no-build --verbosity normal
