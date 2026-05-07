@@ -1,0 +1,47 @@
+# Build output
+**/bin/
+**/obj/
+artifacts/
+output/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Test results / coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+# Logs
+*.log
+
+# NuGet
+*.nupkg
+*.snupkg
+project.assets.json
+
+# Environment / secrets
+.env
+.env.*
+*.local
+secrets.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker / local data
+docker-data/
+data/

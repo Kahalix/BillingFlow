@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- Central Package Management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Define here versions for whole solution -->
+    <PackageVersion Include="MediatR" Version="14.1.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,6 @@
+@BillingFlow.Api_HostAddress = http://localhost:5113
+
+GET {{BillingFlow.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
