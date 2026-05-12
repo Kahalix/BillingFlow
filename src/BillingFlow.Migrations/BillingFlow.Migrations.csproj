@@ -9,6 +9,11 @@
     <Folder Include="Programmability\Procedures\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FluentMigrator.Runner" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>

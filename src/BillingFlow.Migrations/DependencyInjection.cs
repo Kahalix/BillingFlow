@@ -1,12 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+// File: src/BillingFlow.Migrations/DependencyInjection.cs
+using FluentMigrator.Runner;
 
-namespace BillingFlow.Migrations
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Microsoft.Extensions.DependencyInjection;
+
+public static class DependencyInjection
 {
-    internal class DependencyInjection
+    public static IServiceCollection AddBillingMigrations(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddFluentMigratorCore()
+            .ConfigureRunner(rb => rb
+                .AddSqlServer()
+                .WithGlobalConnectionString(configuration.GetConnectionString("DefaultConnection"))
+                .ScanIn(typeof(DependencyInjection).Assembly).For.Migrations())
+            .AddLogging(lb => lb.AddFluentMigratorConsole());
+
+        return services;
     }
 }
