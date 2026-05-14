@@ -1,8 +1,8 @@
 // File: src/BillingFlow.Application/Behaviors/AuthorizationBehavior.cs
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Authorization.Services;
+using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
-using BillingFlow.Domain.Exceptions;
 
 using MediatR;
 

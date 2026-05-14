@@ -1,8 +1,9 @@
-// File: src/BillingFlow.Domain/Exceptions/NotFoundException.cs
-namespace BillingFlow.Domain.Exceptions;
+// File: src/BillingFlow.Application/Common/Exceptions/NotFoundException.cs
+namespace BillingFlow.Application.Common.Exceptions;
 
 /// <summary>
-/// Exception thrown when a requested entity or aggregate is not found in the domain.
+/// Exception thrown when a requested entity or aggregate is not found in the database.
+/// Maps to HTTP 404 Not Found.
 /// </summary>
 public class NotFoundException : Exception
 {

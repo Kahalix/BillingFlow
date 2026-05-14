@@ -1,52 +1,38 @@
-//var builder = WebApplication.CreateBuilder(args);
-
-//// Add services to the container.
-
-//builder.Services.AddControllers();
-//// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-//builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
-
-//var app = builder.Build();
-
-//// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
-
-//app.UseHttpsRedirection();
-
-//app.UseAuthorization();
-
-//app.MapControllers();
-
-//app.Run();
-
-
 // File: src/BillingFlow.Api/Program.cs
+using BillingFlow.Api.Extensions;
 using BillingFlow.Api.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. CONFIGURE SERVICES ---
+// --- 1. CONFIGURE SERVICES (Dependency Injection) ---
 
-// Add Layer Dependencies (Thanks to our DependencyInjection classes)
+// Application Layer (MediatR, FluentValidation, Auth Policies)
 builder.Services.AddApplication();
-//builder.Services.AddInfrastructure(builder.Configuration);
+
+// Infrastructure Layer (EF Core, Identity, JWT Setup)
+builder.Services.AddInfrastructure(builder.Configuration);
+
+// Migrations Layer (FluentMigrator)
 //builder.Services.AddBillingMigrations(builder.Configuration);
 
-// Add API Specific Services
+// API Specific Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Modern Exception Handling (.NET 8 standard)
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+// Add our custom Web Authorization (from AuthorizationExtensions.cs)
+builder.Services.AddWebAuthorization(builder.Configuration);
+
 var app = builder.Build();
 
-// --- 2. CONFIGURE PIPELINE ---
+// --- 2. CONFIGURE HTTP REQUEST PIPELINE ---
+
+// Global Exception Handler MUST be first in the pipeline
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -54,10 +40,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
-// Use authentication/authorization logic provided by the framework
+// Authentication MUST come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -1,11 +1,11 @@
 // File: src/BillingFlow.Application/DependencyInjection.cs
-using System.Reflection;
 
+using System.Reflection;
+using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Authorization.Services;
 using BillingFlow.Application.Behaviors;
-
-using FluentValidation; // Requires: FluentValidation.DependencyInjectionExtensions
-
+using BillingFlow.Application.Features.Identity.Commands.RegisterUser;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -44,6 +44,7 @@ public static class DependencyInjection
         // 4. Register Specific Authorization Policies
         // (Uncomment and add new policies here as we build the application features)
         // services.AddScoped<IAuthorizationPolicy<GetInvoiceDetailsQuery>, GetInvoiceDetailsPolicy>();
+        services.AddScoped<IAuthorizationPolicy<RegisterUserCommand>, RegisterUserPolicy>();
 
         return services;
     }

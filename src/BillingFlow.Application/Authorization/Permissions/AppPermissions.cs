@@ -1,4 +1,4 @@
-// File: src/BillingFlow.Application/Authorization/Permissions/Permissions.cs
+// File: src/BillingFlow.Application/Authorization/Permissions/AppPermissions.cs
 namespace BillingFlow.Application.Authorization.Permissions;
 
 /// <summary>
@@ -7,6 +7,13 @@ namespace BillingFlow.Application.Authorization.Permissions;
 /// </summary>
 public static class AppPermissions
 {
+    // AppUsers
+    public const string UsersRead = "users.read";
+    public const string UsersCreate = "users.create";
+    public const string UsersSuspend = "users.suspend";
+    public const string UsersActivate = "users.activate";
+    public const string UsersChangeRole = "users.changeRole";
+
     // Clients
     public const string ClientsRead = "clients.read";
     public const string ClientsCreate = "clients.create";

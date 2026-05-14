@@ -1,4 +1,5 @@
 // File: src/BillingFlow.Api/Infrastructure/GlobalExceptionHandler.cs
+using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Domain.Exceptions;
 
 using FluentValidation;
@@ -60,7 +61,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 problemDetails.Detail = forbiddenEx.Message;
                 break;
 
-            case UnauthorizedAccessException unauthEx:
+            case UnauthorizedException unauthEx:
                 problemDetails.Title = "Unauthorized";
                 problemDetails.Status = StatusCodes.Status401Unauthorized;
                 problemDetails.Detail = unauthEx.Message;

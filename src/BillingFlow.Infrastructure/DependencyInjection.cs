@@ -1,45 +1,52 @@
-//// File: src/BillingFlow.Infrastructure/DependencyInjection.cs
-//using BillingFlow.Application.Interfaces;
-//using BillingFlow.Infrastructure.Database;
-//using BillingFlow.Infrastructure.Database.Interceptors;
-//using BillingFlow.Infrastructure.Identity;
+// File: src/BillingFlow.Infrastructure/DependencyInjection.cs
+using BillingFlow.Application.Interfaces;
+using BillingFlow.Infrastructure.Database;
+using BillingFlow.Infrastructure.Database.Interceptors;
+using BillingFlow.Infrastructure.Identity;
 
-//using Microsoft.EntityFrameworkCore;
-//using Microsoft.Extensions.Configuration;
-//using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
-//namespace Microsoft.Extensions.DependencyInjection;
+namespace Microsoft.Extensions.DependencyInjection;
 
-//public static class DependencyInjection
-//{
-//    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
-//    {
-//        // 1. Database & Interceptors
-//        services.AddScoped<AuditInterceptor>();
-//        services.AddScoped<DispatchDomainEventsInterceptor>();
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        // 1. Database & Interceptors
 
-//        services.AddDbContext<BillingDbContext>((sp, options) =>
-//        {
-//            var auditInterceptor = sp.GetRequiredService<AuditInterceptor>();
-//            var domainEventsInterceptor = sp.GetRequiredService<DispatchDomainEventsInterceptor>();
+        // Register the interceptor so its dependencies (IPublisher) are resolved by DI
+        services.AddScoped<DispatchDomainEventsInterceptor>();
+        // services.AddScoped<AuditInterceptor>(); // To be added later
 
-//            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-//                   .AddInterceptors(auditInterceptor, domainEventsInterceptor);
-//        });
+        services.AddDbContext<BillingDbContext>((sp, options) =>
+        {
+            var domainEventsInterceptor = sp.GetRequiredService<DispatchDomainEventsInterceptor>();
+            // var auditInterceptor = sp.GetRequiredService<AuditInterceptor>();
 
-//        // Interface mapping
-//        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<BillingDbContext>());
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+                   .AddInterceptors(domainEventsInterceptor);
+            // .AddInterceptors(auditInterceptor, domainEventsInterceptor);
+        });
 
-//        // 2. Identity Services
-//        services.AddHttpContextAccessor(); // Required to read claims from HTTP request
-//        services.AddScoped<ICurrentUserService, CurrentUserService>();
-//        services.AddSingleton<IPasswordHasher, PasswordHasher>();
-//        services.AddSingleton<ITokenGenerator, TokenGenerator>();
+        // Interface mapping for architecture boundary compliance
+        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<BillingDbContext>());
 
-//        // 3. External Services (Stripe, Hangfire, etc.)
-//        // services.AddScoped<IStripeService, StripeIntegrationService>();
-//        // AddHangfire(...)
+        // 2. Identity Services
+        services.AddHttpContextAccessor(); // Required to read claims from HTTP request
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<ITokenGenerator, TokenGenerator>();
+        services.AddSingleton<ITokenHashService, TokenHashService>();
 
-//        return services;
-//    }
-//}
+        // System time abstraction for unit testing
+        services.AddSingleton(TimeProvider.System);
+
+        // 3. External Services (Stripe, Hangfire, etc.)
+        // services.AddScoped<IStripeService, StripeIntegrationService>();
+        // AddHangfire(...)
+
+        return services;
+    }
+}
