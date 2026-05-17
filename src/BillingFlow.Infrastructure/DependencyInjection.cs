@@ -1,18 +1,22 @@
 // File: src/BillingFlow.Infrastructure/DependencyInjection.cs
 using BillingFlow.Application.Interfaces;
+using BillingFlow.Infrastructure.BackgroundJobs;
 using BillingFlow.Infrastructure.Database;
 using BillingFlow.Infrastructure.Database.Interceptors;
 using BillingFlow.Infrastructure.Identity;
 
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         // 1. Database & Interceptors
 
@@ -44,8 +48,41 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
 
         // 3. External Services (Stripe, Hangfire, etc.)
+
+        // Use ConsoleEmailSender for local development. 
+        // For production, a real implementation (e.g., SendGrid/SMTP) should be registered.
+        if (environment.IsDevelopment())
+        {
+            services.AddTransient<IEmailSender, ConsoleEmailSender>();
+        }
+        else
+        {
+            // services.AddTransient<IEmailSender, SmtpEmailSender>();
+        }
+
         // services.AddScoped<IStripeService, StripeIntegrationService>();
-        // AddHangfire(...)
+
+        // --- Hangfire Configuration ---
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("DefaultConnection not found in configuration.");
+
+        services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
+            {
+                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                QueuePollInterval = TimeSpan.Zero,
+                UseRecommendedIsolationLevel = true,
+            }));
+
+        // Register the background job processing server (Worker)
+        services.AddHangfireServer();
+
+        // Register our custom abstraction to decouple the Application layer from Hangfire
+        services.AddTransient<BillingFlow.Application.Interfaces.IBackgroundJobClient, HangfireService>();
 
         return services;
     }

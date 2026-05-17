@@ -29,7 +29,7 @@ public class AuthorizationBehavior<TRequest, TResponse>(
         if (!currentUserService.IsAuthenticated)
         {
             // Throwing an Unauthorized exception (which API will map to HTTP 401)
-            throw new UnauthorizedAccessException("Authentication is required to access this resource.");
+            throw new UnauthorizedException("Authentication is required to access this resource.");
         }
 
         bool isExplicitlySecured = false;

@@ -1,14 +1,18 @@
 // File: src/BillingFlow.Api/Controllers/AuthController.cs
+using BillingFlow.Application.Features.Identity.Commands.ConfirmEmailChange;
 using BillingFlow.Application.Features.Identity.Commands.LoginUser;
 using BillingFlow.Application.Features.Identity.Commands.Logout;
 using BillingFlow.Application.Features.Identity.Commands.LogoutAllDevices;
 using BillingFlow.Application.Features.Identity.Commands.RefreshSession;
 using BillingFlow.Application.Features.Identity.Commands.RegisterUser;
+using BillingFlow.Application.Features.Identity.Commands.RequestPasswordReset;
+using BillingFlow.Application.Features.Identity.Commands.ResetPassword;
 
 using MediatR;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace BillingFlow.Api.Controllers;
 
@@ -96,6 +100,59 @@ public class AuthController(ISender sender) : ControllerBase
     public async Task<IActionResult> LogoutAllDevices(CancellationToken cancellationToken)
     {
         await sender.Send(new LogoutAllDevicesCommand(), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Initiates the password recovery process by sending an email with a reset token.
+    /// Rate limited to prevent email spam and enumeration attacks.
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("PasswordResetPolicy")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] RequestPasswordResetCommand command,
+        CancellationToken cancellationToken)
+    {
+        await sender.Send(command, cancellationToken);
+        // Zwracamy 202 Accepted, co oznacza "przyjęliśmy żądanie do przetworzenia",
+        // co jeszcze mocniej maskuje fakt, czy użytkownik istnieje w bazie.
+        return Accepted();
+    }
+
+    /// <summary>
+    /// Completes the password recovery process using the token sent via email.
+    /// </summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("PasswordResetPolicy")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordCommand command,
+        CancellationToken cancellationToken)
+    {
+        await sender.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Confirms the new email address using the token sent to it.
+    /// </summary>
+    [HttpPost("confirm-email-change")]
+    [AllowAnonymous]
+    [EnableRateLimiting("PasswordResetPolicy")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ConfirmEmailChange(
+        [FromBody] ConfirmEmailChangeCommand command,
+        CancellationToken cancellationToken)
+    {
+        await sender.Send(command, cancellationToken);
         return NoContent();
     }
 }

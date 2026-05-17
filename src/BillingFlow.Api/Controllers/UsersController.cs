@@ -3,6 +3,8 @@ using BillingFlow.Application.Common.Models;
 using BillingFlow.Application.Features.Identity.Commands.ActivateUser;
 using BillingFlow.Application.Features.Identity.Commands.ChangePassword;
 using BillingFlow.Application.Features.Identity.Commands.ChangeUserRole;
+using BillingFlow.Application.Features.Identity.Commands.InitiateMyEmailChange;
+using BillingFlow.Application.Features.Identity.Commands.InitiateUserEmailChange;
 using BillingFlow.Application.Features.Identity.Commands.SuspendUser;
 using BillingFlow.Application.Features.Identity.Queries.GetCurrentUser;
 using BillingFlow.Application.Features.Identity.Queries.GetUserById;
@@ -13,6 +15,7 @@ using MediatR;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace BillingFlow.Api.Controllers;
 
@@ -51,6 +54,23 @@ public class UsersController(ISender sender) : ControllerBase
     {
         await sender.Send(command, cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Initiates an email change process for the currently authenticated user.
+    /// Requires current password for step-up security.
+    /// </summary>
+    [HttpPost("me/email")]
+    [EnableRateLimiting("PasswordResetPolicy")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> InitiateMyEmailChange(
+        [FromBody] InitiateMyEmailChangeCommand command,
+        CancellationToken cancellationToken)
+    {
+        await sender.Send(command, cancellationToken);
+        return Accepted();
     }
 
     /// <summary>
@@ -133,9 +153,31 @@ public class UsersController(ISender sender) : ControllerBase
         await sender.Send(new ChangeUserRoleCommand(id, request.NewRole), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Initiates an email change process for a specific user.
+    /// Restricted to administrators and authorized employees.
+    /// </summary>
+    [HttpPost("{id:guid}/email")]
+    [EnableRateLimiting("PasswordResetPolicy")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> InitiateUserEmailChange(
+        [FromRoute] Guid id,
+        [FromBody] ChangeUserEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new InitiateUserEmailChangeCommand(id, request.NewEmail);
+
+        await sender.Send(command, cancellationToken);
+        return Accepted();
+    }
 }
 
 /// <summary>
-/// DTO representing the request body for changing a user's role.
+/// DTO representing the request body .
 /// </summary>
 public record ChangeUserRoleRequest(Role NewRole);
+public record ChangeUserEmailRequest(string NewEmail);

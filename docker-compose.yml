@@ -1,0 +1,122 @@
+# File: docker-compose.yml
+
+services:
+  # --- 1. RELATIONAL DATABASE (SQL SERVER 2022) ---
+  sqldb:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: billingflow_sqldb
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_PASSWORD}"
+      MSSQL_PID: "Express" # Change to "Standard" or "Enterprise" if licensed
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldb_data:/var/opt/mssql
+    networks:
+      - billing_network
+    # Wait for the DB to be fully operational
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-U", "sa", "-P", "${DB_PASSWORD}", "-C", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # --- 2. DISTRIBUTED CACHE & PUB/SUB (REDIS FOR SIGNALR) ---
+  redis:
+    image: redis:7-alpine
+    container_name: billingflow_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - billing_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+
+  # --- 3. DATABASE MIGRATOR (INIT CONTAINER) ---
+  migrator:
+    # Requires a Dockerfile in the Migrations project
+    build:
+      context: .
+      dockerfile: src/BillingFlow.Migrations/Dockerfile
+    container_name: billingflow_migrator
+    # Does not restart. Runs once, applies migrations, and exits cleanly.
+    restart: "no" 
+    environment:
+      DOTNET_ENVIRONMENT: "${DOTNET_ENVIRONMENT}"
+      ConnectionStrings__DefaultConnection: "Server=sqldb;Database=${DB_NAME};User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;"
+    networks:
+      - billing_network
+    depends_on:
+      sqldb:
+        condition: service_healthy # Will not start until SQL Server is ready
+
+  # --- 4. MAIN API APPLICATION ---
+  api:
+    build:
+      context: .
+      dockerfile: src/BillingFlow.Api/Dockerfile
+    container_name: billingflow_api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT}"
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Server=sqldb;Database=${DB_NAME};User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;"
+      JwtSettings__Secret: "${JWT_SECRET}"
+      JwtSettings__Issuer: "${JWT_ISSUER}"
+      JwtSettings__Audience: "${JWT_AUDIENCE}"
+      Stripe__SecretKey: "${STRIPE_SECRET_KEY}"
+      Stripe__WebhookSecret: "${STRIPE_WEBHOOK_SECRET}"
+    ports:
+      - "8080:8080"
+    networks:
+      - billing_network
+    depends_on:
+      sqldb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully # Critical: API waits for DB schema to be ready
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  sqldb_data:
+  redis_data:
+
+networks:
+  billing_network:
+    driver: bridge

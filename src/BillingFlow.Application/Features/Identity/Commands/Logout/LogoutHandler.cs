@@ -1,4 +1,5 @@
 // File: src/BillingFlow.Application/Features/Identity/Commands/Logout/LogoutHandler.cs
+using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
 
@@ -20,7 +21,7 @@ public class LogoutHandler(
 
         if (currentSessionId == Guid.Empty)
         {
-            throw new UnauthorizedAccessException("Invalid session context.");
+            throw new UnauthorizedException("Invalid session context.");
         }
 
         // Fetch all tokens tied to this specific session that are still active

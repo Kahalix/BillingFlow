@@ -35,7 +35,7 @@ public class RefreshSessionHandler(
 
         if (existingToken is null)
         {
-            throw new UnauthorizedAccessException("Invalid refresh token.");
+            throw new UnauthorizedException("Invalid refresh token.");
         }
 
         var token = existingToken.Token;
@@ -94,7 +94,7 @@ public class RefreshSessionHandler(
             // If two requests attempt to refresh using the same token simultaneously,
             // the second one will hit this block because the RowVersion will have changed.
             // We treat this concurrent access as a Replay Attack attempt.
-            throw new UnauthorizedAccessException("Session compromise detected (concurrent access). Please log in again.");
+            throw new UnauthorizedException("Session compromise detected (concurrent access). Please log in again.");
         }
 
         return new AuthTokensResponse(

@@ -11,6 +11,7 @@ public class BillingDbContext(DbContextOptions<BillingDbContext> options)
 {
     public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<UserToken> UserTokens => Set<UserToken>();
+    public DbSet<Client> Clients => Set<Client>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

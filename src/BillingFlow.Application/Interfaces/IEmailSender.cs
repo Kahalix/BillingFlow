@@ -1,0 +1,12 @@
+// File: src/BillingFlow.Application/Interfaces/IEmailSender.cs
+namespace BillingFlow.Application.Interfaces;
+
+/// <summary>
+/// Abstraction for dispatching system emails (e.g., password resets, invoices).
+/// </summary>
+public interface IEmailSender
+{
+    Task SendPasswordResetEmailAsync(string toEmail, string resetToken, CancellationToken cancellationToken = default);
+    Task SendEmailChangeConfirmationAsync(string newEmail, string confirmationToken, CancellationToken cancellationToken = default);
+    Task SendEmailChangedNoticeAsync(string oldEmail, CancellationToken cancellationToken = default);
+}

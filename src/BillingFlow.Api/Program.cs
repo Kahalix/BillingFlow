@@ -1,6 +1,8 @@
 // File: src/BillingFlow.Api/Program.cs
 using BillingFlow.Api.Extensions;
 using BillingFlow.Api.Infrastructure;
+using Hangfire;
+using BillingFlow.Infrastructure.BackgroundJobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,19 +12,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 
 // Infrastructure Layer (EF Core, Identity, JWT Setup)
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
 // Migrations Layer (FluentMigrator)
-//builder.Services.AddBillingMigrations(builder.Configuration);
+// builder.Services.AddBillingMigrations(builder.Configuration);
 
-// API Specific Services
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// Modern Exception Handling (.NET 8 standard)
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddProblemDetails();
+// API Specific Services (Controllers, Swagger, Exception Handler, Rate Limiting)
+builder.Services.AddPresentation();
 
 // Add our custom Web Authorization (from AuthorizationExtensions.cs)
 builder.Services.AddWebAuthorization(builder.Configuration);
@@ -42,9 +38,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Routing & Rate Limiting (MUST be in this order and before Auth)
+app.UseRouting();
+app.UseRateLimiter();
+
 // Authentication MUST come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// --- Hangfire Dashboard Mapping ---
+// We map it globally, but apply different authorization rules based on the environment.
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = app.Environment.IsDevelopment()
+        ? [] // Local dev: No auth required
+        : [new HangfireAuthorizationFilter()] // Production: Only Admins
+});
 
 app.MapControllers();
 

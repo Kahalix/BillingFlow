@@ -12,13 +12,6 @@ public abstract class Entity
     /// </summary>
     public Guid Id { get; protected set; }
 
-    /// <summary>
-    /// Gets or sets the concurrency token for optimistic locking.
-    /// It is nullable because transient (unsaved) entities do not have a version yet.
-    /// EF Core will automatically populate this field on every database save.
-    /// </summary>
-    public byte[]? RowVersion { get; protected set; }
-
     private readonly List<IDomainEvent> _domainEvents = [];
 
     /// <summary>

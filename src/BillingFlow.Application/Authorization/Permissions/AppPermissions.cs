@@ -13,6 +13,7 @@ public static class AppPermissions
     public const string UsersSuspend = "users.suspend";
     public const string UsersActivate = "users.activate";
     public const string UsersChangeRole = "users.changeRole";
+    public const string UsersChangeEmail = "users.changeEmail";
 
     // Clients
     public const string ClientsRead = "clients.read";

@@ -20,6 +20,9 @@ public class AppUser : Entity, IAggregateRoot
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? LastLoginAt { get; private set; }
 
+    // Explicit concurrency token for this Aggregate Root
+    public byte[]? RowVersion { get; private set; }
+
     protected AppUser() { }
 
     public AppUser(string email, string passwordHash, Role role, DateTimeOffset createdAt)
@@ -93,5 +96,19 @@ public class AppUser : Entity, IAggregateRoot
 
         // Emits an event allowing the system to react (e.g., auditing, or session invalidation)
         AddDomainEvent(new UserRoleChangedEvent(Id, oldRole, newRole));
+    }
+
+    public void ChangeEmail(string newEmail)
+    {
+        if (string.IsNullOrWhiteSpace(newEmail))
+            throw new DomainException("New email cannot be empty.");
+
+        var normalizedNewEmail = newEmail.Trim().ToLowerInvariant();
+        if (Email == normalizedNewEmail) return;
+
+        var oldEmail = Email;
+        Email = normalizedNewEmail;
+
+        AddDomainEvent(new EmailChangedEvent(Id, oldEmail, normalizedNewEmail));
     }
 }
