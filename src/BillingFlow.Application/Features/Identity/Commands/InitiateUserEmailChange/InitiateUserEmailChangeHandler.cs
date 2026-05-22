@@ -40,7 +40,9 @@ public class InitiateUserEmailChangeHandler(
         // 3. Generate a secure token
         var rawToken = tokenGenerator.GenerateSecureToken();
         var tokenHash = tokenHashService.HashToken(rawToken);
-        var expiry = timeProvider.GetUtcNow().AddHours(24);
+
+        var now = timeProvider.GetUtcNow();
+        var expiry = now.AddHours(24);
 
         var token = new UserToken(
             request.TargetUserId,
@@ -48,6 +50,7 @@ public class InitiateUserEmailChangeHandler(
             UserTokenType.EmailConfirmation,
             tokenHash,
             expiry,
+            now,
             data: normalizedNewEmail);
 
         context.UserTokens.Add(token);

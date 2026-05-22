@@ -1,12 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+// File: src/BillingFlow.Infrastructure/Authorization/PermissionClaimsProvider.cs
+using System.Security.Claims;
 
-namespace BillingFlow.Infrastructure.Authorization
+using BillingFlow.Application.Authorization;
+using BillingFlow.Application.Authorization.Roles;
+using BillingFlow.Application.Interfaces;
+using BillingFlow.Domain.Enums;
+
+namespace BillingFlow.Infrastructure.Authorization;
+
+public class PermissionClaimsProvider : IPermissionClaimsProvider
 {
-    internal class PermissionClaimsProvider
+    public IEnumerable<Claim> GetClaimsForRole(Role role)
     {
+        var permissions = RolePermissions.GetPermissionsFor(role) ?? Enumerable.Empty<string>();
+
+        // Distinct() ensures no duplicate claims are added to the JWT
+        return permissions
+            .Distinct()
+            .Select(permission => new Claim(CustomClaimTypes.Permission, permission));
     }
 }

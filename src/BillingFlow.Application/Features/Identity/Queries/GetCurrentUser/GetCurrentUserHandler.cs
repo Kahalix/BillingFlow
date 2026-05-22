@@ -19,6 +19,7 @@ public class GetCurrentUserHandler(
 
         var user = await context.Users
             .AsNoTracking()
+            .Where(u => u.Id == userId)
             .Select(u => new CurrentUserProfileDto(
                 u.Id,
                 u.Email,
@@ -27,7 +28,7 @@ public class GetCurrentUserHandler(
                 u.CreatedAt,
                 u.LastLoginAt
             ))
-            .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
 
         if (user is null)
         {

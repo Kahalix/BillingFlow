@@ -1,4 +1,5 @@
 // File: src/BillingFlow.Api/Controllers/AuthController.cs
+using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Features.Identity.Commands.ConfirmEmailChange;
 using BillingFlow.Application.Features.Identity.Commands.LoginUser;
 using BillingFlow.Application.Features.Identity.Commands.Logout;
@@ -28,7 +29,7 @@ public class AuthController(ISender sender) : ControllerBase
     /// Requires active authentication and the 'users.create' permission.
     /// </summary>
     [HttpPost("register")]
-    [Authorize]
+    [Authorize(Policy = AppPermissions.UsersCreate)]
     [ProducesResponseType(typeof(RegisterUserResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

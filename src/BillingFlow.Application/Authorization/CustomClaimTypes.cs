@@ -2,9 +2,12 @@
 namespace BillingFlow.Application.Authorization;
 
 /// <summary>
-/// Defines custom claim types used across the application to avoid magic strings.
+/// Defines custom JWT claims used across the application.
 /// </summary>
 public static class CustomClaimTypes
 {
-    public const string SessionId = "SessionId";
+    public const string SessionId = "sessionId";
+
+    // Namespaced to prevent collisions with standard IdP claims
+    public const string Permission = "billingflow.permission";
 }

@@ -1,11 +1,17 @@
 // File: src/BillingFlow.Application/DependencyInjection.cs
 
 using System.Reflection;
+
 using BillingFlow.Application.Authorization.Requirements;
-using BillingFlow.Application.Authorization.Services;
 using BillingFlow.Application.Behaviors;
+using BillingFlow.Application.Features.Identity.Commands.ActivateUser;
+using BillingFlow.Application.Features.Identity.Commands.ChangeUserRole;
+using BillingFlow.Application.Features.Identity.Commands.InitiateUserEmailChange;
 using BillingFlow.Application.Features.Identity.Commands.RegisterUser;
+using BillingFlow.Application.Features.Identity.Commands.SuspendUser;
+
 using FluentValidation;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -38,13 +44,14 @@ public static class DependencyInjection
             cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
 
-        // 3. Register Authorization Engine
-        services.AddScoped<IAuthorizer, Authorizer>();
-
-        // 4. Register Specific Authorization Policies
+        // 3. Register Specific Authorization Policies
         // (Uncomment and add new policies here as we build the application features)
         // services.AddScoped<IAuthorizationPolicy<GetInvoiceDetailsQuery>, GetInvoiceDetailsPolicy>();
         services.AddScoped<IAuthorizationPolicy<RegisterUserCommand>, RegisterUserPolicy>();
+        services.AddScoped<IAuthorizationPolicy<ActivateUserCommand>, ActivateUserPolicy>();
+        services.AddScoped<IAuthorizationPolicy<ChangeUserRoleCommand>, ChangeUserRolePolicy>();
+        services.AddScoped<IAuthorizationPolicy<SuspendUserCommand>, SuspendUserPolicy>();
+        services.AddScoped<IAuthorizationPolicy<InitiateUserEmailChangeCommand>, InitiateUserEmailChangePolicy>();
 
         return services;
     }

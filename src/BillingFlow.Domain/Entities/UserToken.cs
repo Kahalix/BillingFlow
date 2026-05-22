@@ -11,14 +11,24 @@ public class UserToken : Entity
     public UserTokenType Type { get; private set; }
     public string TokenHash { get; private set; } = string.Empty;
     public string? Data { get; private set; }
+
+    public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset Expiry { get; private set; }
     public DateTimeOffset? ConsumedAt { get; private set; }
+
     public bool IsExpired(TimeProvider timeProvider) => timeProvider.GetUtcNow() >= Expiry;
     public bool IsActive(TimeProvider timeProvider) => !ConsumedAt.HasValue && !IsExpired(timeProvider);
 
     protected UserToken() { }
 
-    public UserToken(Guid userId, Guid sessionId, UserTokenType type, string tokenHash, DateTimeOffset expiry, string? data = null)
+    public UserToken(
+        Guid userId,
+        Guid sessionId,
+        UserTokenType type,
+        string tokenHash,
+        DateTimeOffset expiry,
+        DateTimeOffset createdAt,
+        string? data = null)
     {
         Id = Guid.NewGuid();
         UserId = userId;
@@ -26,6 +36,7 @@ public class UserToken : Entity
         Type = type;
         TokenHash = tokenHash;
         Expiry = expiry;
+        CreatedAt = createdAt;
         Data = data;
     }
 

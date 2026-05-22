@@ -8,7 +8,4 @@ using MediatR;
 public record RegisterUserCommand(
     string Email,
     string Password,
-    Role TargetRole) : IRequest<Guid>, IAuthenticatedRequest, IRequirePermission, IRequirePolicy
-{
-    public string Permission => AppPermissions.UsersCreate;
-}
+    Role TargetRole) : IRequest<Guid>, IAuthenticatedRequest, IRequirePermission, IRequirePolicy;

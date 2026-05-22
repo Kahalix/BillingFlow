@@ -1,11 +1,15 @@
 // File: src/BillingFlow.Api/Extensions/AuthorizationExtensions.cs
 using System.Text;
 
+using BillingFlow.Application.Authorization;
 using BillingFlow.Application.Authorization.Permissions;
+using BillingFlow.Application.Interfaces;
+using BillingFlow.Domain.Enums;
 using BillingFlow.Infrastructure.Authorization;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace BillingFlow.Api.Extensions;
@@ -37,10 +41,56 @@ public static class AuthorizationExtensions
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
                     ClockSkew = TimeSpan.Zero // Strictly respect token expiration time
                 };
+
+                // Real-time Session Revocation Check
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        // Resolve scoped dependencies from the current HTTP Request context
+                        var dbContext = context.HttpContext.RequestServices.GetRequiredService<IApplicationDbContext>();
+                        var timeProvider = context.HttpContext.RequestServices.GetRequiredService<TimeProvider>();
+
+                        var sessionIdClaim = context.Principal?.FindFirst(CustomClaimTypes.SessionId);
+
+                        if (sessionIdClaim == null || !Guid.TryParse(sessionIdClaim.Value, out var sessionId))
+                        {
+                            context.Fail("Token does not contain a valid SessionId.");
+                            return;
+                        }
+
+                        var now = timeProvider.GetUtcNow();
+
+                        // Strict Revocation Check: 
+                        // The session is only valid if its root RefreshToken is unconsumed and not expired.
+                        var isSessionValid = await dbContext.UserTokens
+                            .AnyAsync(t =>
+                                t.SessionId == sessionId &&
+                                t.Type == UserTokenType.RefreshToken &&
+                                t.ConsumedAt == null &&
+                                t.Expiry > now,
+                                context.HttpContext.RequestAborted);
+
+                        if (!isSessionValid)
+                        {
+                            // Triggers an immediate HTTP 401 Unauthorized, disregarding the JWT's internal validity
+                            context.Fail("This session has been revoked or expired.");
+                        }
+                    }
+                };
             });
 
         // 2. Configure Permission-based Authorization Policies
+        // Explicitly mapping each permission guarantees startup-time validation of policy names.
         services.AddAuthorizationBuilder()
+            // Users
+            .AddPolicy(AppPermissions.UsersRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.UsersRead)))
+            .AddPolicy(AppPermissions.UsersCreate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.UsersCreate)))
+            .AddPolicy(AppPermissions.UsersSuspend, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.UsersSuspend)))
+            .AddPolicy(AppPermissions.UsersActivate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.UsersActivate)))
+            .AddPolicy(AppPermissions.UsersChangeRole, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.UsersChangeRole)))
+            .AddPolicy(AppPermissions.UsersChangeEmail, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.UsersChangeEmail)))
+
             // Clients
             .AddPolicy(AppPermissions.ClientsRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsRead)))
             .AddPolicy(AppPermissions.ClientsCreate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsCreate)))
@@ -55,7 +105,7 @@ public static class AuthorizationExtensions
             .AddPolicy(AppPermissions.PaymentsRefund, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.PaymentsRefund)));
 
         // 3. Register the custom permission handler
-        services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
         return services;
     }

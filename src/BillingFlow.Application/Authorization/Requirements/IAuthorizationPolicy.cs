@@ -10,5 +10,5 @@ public interface IAuthorizationPolicy<in TRequest> where TRequest : notnull
     /// <summary>
     /// Evaluates if the current context meets the policy requirements.
     /// </summary>
-    Task<bool> CanExecuteAsync(TRequest request, CancellationToken cancellationToken);
+    Task<bool> AuthorizeAsync(TRequest request, CancellationToken cancellationToken);
 }

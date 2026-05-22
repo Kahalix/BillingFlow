@@ -11,7 +11,7 @@ public class InitiateUserEmailChangePolicy(
     ICurrentUserService currentUserService,
     IApplicationDbContext context) : IAuthorizationPolicy<InitiateUserEmailChangeCommand>
 {
-    public async Task<bool> CanExecuteAsync(InitiateUserEmailChangeCommand request, CancellationToken cancellationToken)
+    public async Task<bool> AuthorizeAsync(InitiateUserEmailChangeCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId;
         var currentUserRole = currentUserService.UserRole;

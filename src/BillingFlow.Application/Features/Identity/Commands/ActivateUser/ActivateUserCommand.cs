@@ -6,7 +6,4 @@ using MediatR;
 
 namespace BillingFlow.Application.Features.Identity.Commands.ActivateUser;
 
-public record ActivateUserCommand(Guid UserId) : IRequest, IRequirePermission, IRequirePolicy
-{
-    public string Permission => AppPermissions.UsersActivate;
-}
+public record ActivateUserCommand(Guid UserId) : IRequest, IRequirePermission, IRequirePolicy;

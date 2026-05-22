@@ -1,5 +1,6 @@
 // File: src/BillingFlow.Infrastructure/DependencyInjection.cs
 using BillingFlow.Application.Interfaces;
+using BillingFlow.Infrastructure.Authorization;
 using BillingFlow.Infrastructure.BackgroundJobs;
 using BillingFlow.Infrastructure.Database;
 using BillingFlow.Infrastructure.Database.Interceptors;
@@ -7,6 +8,7 @@ using BillingFlow.Infrastructure.Identity;
 
 using Hangfire;
 using Hangfire.SqlServer;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +45,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenGenerator, TokenGenerator>();
         services.AddSingleton<ITokenHashService, TokenHashService>();
+        services.AddSingleton<IPermissionClaimsProvider, PermissionClaimsProvider>();
 
         // System time abstraction for unit testing
         services.AddSingleton(TimeProvider.System);

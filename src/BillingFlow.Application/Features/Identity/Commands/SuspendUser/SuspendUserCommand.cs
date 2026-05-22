@@ -6,7 +6,4 @@ using MediatR;
 
 namespace BillingFlow.Application.Features.Identity.Commands.SuspendUser;
 
-public record SuspendUserCommand(Guid UserId) : IRequest, IRequirePermission, IRequirePolicy
-{
-    public string Permission => AppPermissions.UsersSuspend;
-}
+public record SuspendUserCommand(Guid UserId) : IRequest, IRequirePermission, IRequirePolicy;

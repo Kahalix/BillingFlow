@@ -11,25 +11,35 @@ public class CreateUserTokensTable : Migration
         Create.Table("UserTokens")
             .WithColumn("Id").AsGuid().PrimaryKey()
             .WithColumn("UserId").AsGuid().NotNullable()
-            // Reduced to 128 characters (sufficient for SHA-256 hex string which is 64 chars)
             .WithColumn("TokenHash").AsString(128).NotNullable()
             .WithColumn("SessionId").AsGuid().NotNullable()
-            .WithColumn("Type").AsInt32().NotNullable() // UserTokenType enum
+            .WithColumn("Type").AsInt32().NotNullable()
             .WithColumn("Expiry").AsDateTimeOffset().NotNullable()
+            .WithColumn("ConsumedAt").AsDateTimeOffset().Nullable()
+            .WithColumn("CreatedAt").AsDateTimeOffset().NotNullable()
             .WithColumn("Data").AsString(255).Nullable();
 
-        // Unique Index on TokenHash
+        // 1. Unique Index on TokenHash
         Create.Index("IX_UserTokens_TokenHash")
             .OnTable("UserTokens")
             .OnColumn("TokenHash").Ascending()
             .WithOptions().Unique();
 
-        // Index on SessionId
-        Create.Index("IX_UserTokens_SessionId")
+        // 2. Composite Index for Session Revocation
+        Create.Index("IX_UserTokens_SessionId_Type_ConsumedAt")
             .OnTable("UserTokens")
-            .OnColumn("SessionId").Ascending();
+            .OnColumn("SessionId").Ascending()
+            .OnColumn("Type").Ascending()
+            .OnColumn("ConsumedAt").Ascending();
 
-        // Composite Index on Type + Expiry
+        // 3. Composite Index for User-level Revocation
+        Create.Index("IX_UserTokens_UserId_Type_ConsumedAt")
+            .OnTable("UserTokens")
+            .OnColumn("UserId").Ascending()
+            .OnColumn("Type").Ascending()
+            .OnColumn("ConsumedAt").Ascending();
+
+        // 4. Composite Index for Cleanup Jobs
         Create.Index("IX_UserTokens_Type_Expiry")
             .OnTable("UserTokens")
             .OnColumn("Type").Ascending()

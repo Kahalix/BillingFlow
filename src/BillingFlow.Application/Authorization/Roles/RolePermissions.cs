@@ -12,9 +12,9 @@ public static class RolePermissions
 {
     private static readonly IReadOnlyList<string> AdminPermissions =
     [
-        AppPermissions.UsersCreate, AppPermissions.UsersSuspend,
+        AppPermissions.UsersCreate, AppPermissions.UsersRead,
         AppPermissions.UsersActivate, AppPermissions.UsersChangeRole,
-        AppPermissions.UsersChangeEmail,
+        AppPermissions.UsersChangeEmail, AppPermissions.UsersSuspend,
         AppPermissions.ClientsRead,
         AppPermissions.ClientsCreate, AppPermissions.ClientsSuspend,
         AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate,
@@ -23,9 +23,9 @@ public static class RolePermissions
 
     private static readonly IReadOnlyList<string> ManagerPermissions =
     [
-        AppPermissions.UsersCreate, AppPermissions.UsersChangeEmail,
-        AppPermissions.UsersSuspend, AppPermissions.UsersActivate,
-        AppPermissions.UsersChangeRole,
+        AppPermissions.UsersCreate, AppPermissions.UsersRead,
+        AppPermissions.UsersChangeEmail, AppPermissions.UsersSuspend,
+        AppPermissions.UsersActivate, AppPermissions.UsersChangeRole,
         AppPermissions.ClientsRead,
         AppPermissions.ClientsCreate, AppPermissions.ClientsSuspend,
         AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate
@@ -39,7 +39,8 @@ public static class RolePermissions
 
     private static readonly IReadOnlyList<string> EmployeePermissions =
     [
-        AppPermissions.UsersCreate, AppPermissions.ClientsRead,
+        AppPermissions.UsersCreate, AppPermissions.UsersRead,
+        AppPermissions.ClientsRead,
         AppPermissions.InvoicesRead
     ];
 

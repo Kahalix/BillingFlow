@@ -16,8 +16,4 @@ public record GetUsersQuery(
     int PageNumber = 1,
     int PageSize = 10,
     Role? FilterByRole = null,
-    string? SearchTerm = null) : IRequest<PaginatedList<UserSummaryDto>>, IRequirePermission
-{
-    // Assuming you add AppPermissions.UsersRead = "users.read"
-    public string Permission => AppPermissions.UsersRead;
-}
+    string? SearchTerm = null) : IRequest<PaginatedList<UserSummaryDto>>, IRequirePermission;

@@ -14,7 +14,7 @@ public class SuspendUserPolicy(
     ICurrentUserService currentUserService,
     IApplicationDbContext context) : IAuthorizationPolicy<SuspendUserCommand>
 {
-    public async Task<bool> CanExecuteAsync(SuspendUserCommand request, CancellationToken cancellationToken)
+    public async Task<bool> AuthorizeAsync(SuspendUserCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId;
         var currentUserRole = currentUserService.UserRole;

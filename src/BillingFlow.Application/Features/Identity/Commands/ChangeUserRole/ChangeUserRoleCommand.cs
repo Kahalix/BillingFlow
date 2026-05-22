@@ -7,7 +7,4 @@ using MediatR;
 
 namespace BillingFlow.Application.Features.Identity.Commands.ChangeUserRole;
 
-public record ChangeUserRoleCommand(Guid UserId, Role NewRole) : IRequest, IRequirePermission, IRequirePolicy
-{
-    public string Permission => AppPermissions.UsersChangeRole;
-}
+public record ChangeUserRoleCommand(Guid UserId, Role NewRole) : IRequest, IRequirePermission, IRequirePolicy;

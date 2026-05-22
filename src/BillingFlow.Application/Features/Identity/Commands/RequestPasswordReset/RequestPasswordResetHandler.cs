@@ -36,7 +36,8 @@ public class RequestPasswordResetHandler(
         var tokenHash = tokenHashService.HashToken(rawToken);
 
         // 2. Create the domain entity for the token (Valid for 1 hour)
-        var expiry = timeProvider.GetUtcNow().AddHours(1);
+        var now = timeProvider.GetUtcNow();
+        var expiry = now.AddHours(1);
 
         // Note: Password reset tokens don't need a SessionId, so we can use Guid.Empty
         var userToken = new UserToken(
@@ -44,7 +45,8 @@ public class RequestPasswordResetHandler(
             Guid.Empty,
             UserTokenType.PasswordReset,
             tokenHash,
-            expiry);
+            expiry,
+            now);
 
         context.UserTokens.Add(userToken);
         await context.SaveChangesAsync(cancellationToken);

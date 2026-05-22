@@ -19,14 +19,15 @@ namespace BillingFlow.Infrastructure.Identity;
 /// Responsible for creating short-lived JWTs for API access and cryptographically strong, 
 /// URL-safe tokens for refresh and reset flows.
 /// </summary>
-public class TokenGenerator(IConfiguration configuration) : ITokenGenerator
+public class TokenGenerator(
+    IConfiguration configuration,
+    IPermissionClaimsProvider permissionClaimsProvider)
+    : ITokenGenerator
 {
     /// <summary>
-    /// Generates a JSON Web Token (JWT) containing user claims and a specific session identifier.
-    /// </summary>
-    /// <param name="user">The authenticated user.</param>
-    /// <param name="sessionId">The unique identifier for the current session.</param>
-    /// <returns>A signed JWT string.</returns>
+    /// Generates a JSON Web Token (JWT) containing user claims, specific session identifier,
+    /// and fine-grained permissions based on the user's role.
+    /// </summary>  
     public string GenerateJwt(AppUser user, Guid sessionId)
     {
         var secret = configuration["JwtSettings:Secret"]
@@ -35,6 +36,7 @@ public class TokenGenerator(IConfiguration configuration) : ITokenGenerator
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        // 1. Base identity and session claims
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -43,6 +45,10 @@ public class TokenGenerator(IConfiguration configuration) : ITokenGenerator
             new(ClaimTypes.Role, user.Role.ToString()),
             new(CustomClaimTypes.SessionId, sessionId.ToString())
         };
+
+        // 2. Add to token fine-grained static permissions
+        var permissionClaims = permissionClaimsProvider.GetClaimsForRole(user.Role);
+        claims.AddRange(permissionClaims);
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {

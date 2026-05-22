@@ -14,11 +14,17 @@ public class AddForeignKeys : Migration
             .ToTable("Users").PrimaryColumn("Id")
             .OnDelete(System.Data.Rule.Cascade);
 
+        // 2. Clients -> Users
+        Create.ForeignKey("FK_Clients_Users_UserId")
+            .FromTable("Clients").ForeignColumn("UserId")
+            .ToTable("Users").PrimaryColumn("Id")
+            .OnDelete(System.Data.Rule.SetNull);
     }
 
     public override void Down()
     {
         // Explicitly drop the constraint before tables are dropped in earlier migrations
+        Delete.ForeignKey("FK_Clients_Users_UserId").OnTable("Clients");
         Delete.ForeignKey("FK_UserTokens_Users_UserId").OnTable("UserTokens");
     }
 }

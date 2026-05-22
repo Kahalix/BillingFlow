@@ -11,7 +11,7 @@ public class ActivateUserPolicy(
     ICurrentUserService currentUserService,
     IApplicationDbContext context) : IAuthorizationPolicy<ActivateUserCommand>
 {
-    public async Task<bool> CanExecuteAsync(ActivateUserCommand request, CancellationToken cancellationToken)
+    public async Task<bool> AuthorizeAsync(ActivateUserCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId;
         var currentUserRole = currentUserService.UserRole;

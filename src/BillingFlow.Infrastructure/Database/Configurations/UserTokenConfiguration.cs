@@ -9,7 +9,6 @@ public class UserTokenConfiguration : IEntityTypeConfiguration<UserToken>
 {
     public void Configure(EntityTypeBuilder<UserToken> builder)
     {
-        // Explicitly map to "UserTokens"
         builder.ToTable("UserTokens");
 
         builder.HasKey(t => t.Id);
@@ -18,18 +17,28 @@ public class UserTokenConfiguration : IEntityTypeConfiguration<UserToken>
         builder.HasIndex(t => t.TokenHash)
             .IsUnique();
 
-        // Ensure EF Core limits the TokenHash length to match the migration
         builder.Property(t => t.TokenHash)
             .IsRequired()
             .HasMaxLength(128);
 
-        // 2. Index on SessionId: Crucial for Logout and Aggressive Revocation queries
-        builder.HasIndex(t => t.SessionId);
+        // 2. Composite Index for Logout & Revocation checks
+        // Covers queries like: t.SessionId == sessionId && t.Type == UserTokenType.RefreshToken && t.ConsumedAt == null
+        builder.HasIndex(t => new { t.SessionId, t.Type, t.ConsumedAt });
 
-        // 3. Composite Index on Type + Expiry: Highly optimizes the background cleanup job
+        // 3. Composite Index for LogoutAllDevices & Account Suspensions
+        // Covers queries like: t.UserId == userId && t.ConsumedAt == null
+        builder.HasIndex(t => new { t.UserId, t.Type, t.ConsumedAt });
+
+        // 4. Composite Index for Background Cleanup Jobs
+        // Covers queries filtering by expired tokens of specific types
         builder.HasIndex(t => new { t.Type, t.Expiry });
 
-        // 4. Data column (used for storing pending emails during change process)
+        builder.Property(t => t.ConsumedAt)
+            .IsRequired(false);
+
+        builder.Property(t => t.CreatedAt)
+            .IsRequired();
+
         builder.Property(t => t.Data)
             .HasMaxLength(255) 
             .IsRequired(false);

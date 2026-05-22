@@ -6,7 +6,4 @@ using MediatR;
 
 namespace BillingFlow.Application.Features.Identity.Commands.InitiateUserEmailChange;
 
-public record InitiateUserEmailChangeCommand(Guid TargetUserId, string NewEmail) : IRequest, IRequirePermission, IRequirePolicy
-{
-    public string Permission => AppPermissions.UsersChangeEmail;
-}
+public record InitiateUserEmailChangeCommand(Guid TargetUserId, string NewEmail) : IRequest, IRequirePermission, IRequirePolicy;

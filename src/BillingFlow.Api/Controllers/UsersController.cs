@@ -1,4 +1,5 @@
 // File: src/BillingFlow.Api/Controllers/UsersController.cs
+using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Common.Models;
 using BillingFlow.Application.Features.Identity.Commands.ActivateUser;
 using BillingFlow.Application.Features.Identity.Commands.ChangePassword;
@@ -26,13 +27,13 @@ namespace BillingFlow.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Enforces authentication globally for this controller
 public class UsersController(ISender sender) : ControllerBase
 {
     /// <summary>
     /// Retrieves the profile of the currently authenticated user.
     /// </summary>
     [HttpGet("me")]
+    [Authorize]
     [ProducesResponseType(typeof(CurrentUserProfileDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken)
@@ -45,6 +46,7 @@ public class UsersController(ISender sender) : ControllerBase
     /// Changes the password for the currently authenticated user.
     /// </summary>
     [HttpPut("me/password")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -61,6 +63,7 @@ public class UsersController(ISender sender) : ControllerBase
     /// Requires current password for step-up security.
     /// </summary>
     [HttpPost("me/email")]
+    [Authorize]
     [EnableRateLimiting("PasswordResetPolicy")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -77,6 +80,7 @@ public class UsersController(ISender sender) : ControllerBase
     /// Retrieves a paginated and optionally filtered list of system users.
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = AppPermissions.UsersRead)]
     [ProducesResponseType(typeof(PaginatedList<UserSummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -92,6 +96,7 @@ public class UsersController(ISender sender) : ControllerBase
     /// Retrieves detailed information about a specific user.
     /// </summary>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = AppPermissions.UsersRead)]
     [ProducesResponseType(typeof(UserDetailsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -108,6 +113,7 @@ public class UsersController(ISender sender) : ControllerBase
     /// Suspends a user account, instantly revoking all active sessions.
     /// </summary>
     [HttpPut("{id:guid}/suspend")]
+    [Authorize(Policy = AppPermissions.UsersSuspend)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -124,6 +130,7 @@ public class UsersController(ISender sender) : ControllerBase
     /// Reactivates a suspended user account.
     /// </summary>
     [HttpPut("{id:guid}/activate")]
+    [Authorize(Policy = AppPermissions.UsersActivate)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -140,6 +147,7 @@ public class UsersController(ISender sender) : ControllerBase
     /// Modifies the system role of a target user, subject to hierarchical authorization rules.
     /// </summary>
     [HttpPut("{id:guid}/role")]
+    [Authorize(Policy = AppPermissions.UsersChangeRole)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -159,6 +167,7 @@ public class UsersController(ISender sender) : ControllerBase
     /// Restricted to administrators and authorized employees.
     /// </summary>
     [HttpPost("{id:guid}/email")]
+    [Authorize(Policy = AppPermissions.UsersChangeEmail)]
     [EnableRateLimiting("PasswordResetPolicy")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

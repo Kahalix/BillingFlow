@@ -73,13 +73,16 @@ public class RefreshSessionHandler(
         var newRefreshTokenString = tokenGenerator.GenerateSecureToken();
         var newHashedRefreshToken = tokenHashService.HashToken(newRefreshTokenString);
 
-        var tokenExpiry = timeProvider.GetUtcNow().AddDays(7);
+        var now = timeProvider.GetUtcNow();
+        var tokenExpiry = now.AddDays(7);
+
         var newUserToken = new UserToken(
             userId: user.Id,
             sessionId: token.SessionId,
             type: UserTokenType.RefreshToken,
             tokenHash: newHashedRefreshToken,
-            expiry: tokenExpiry
+            expiry: tokenExpiry,
+            createdAt: now
         );
 
         context.UserTokens.Add(newUserToken);

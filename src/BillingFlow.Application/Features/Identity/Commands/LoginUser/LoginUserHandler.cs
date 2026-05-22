@@ -53,13 +53,16 @@ public class LoginUserHandler(
         var hashedRefreshToken = tokenHashService.HashToken(refreshTokenString);
 
         // 5. Create the Refresh Token Domain Entity (Valid for 7 days)
-        var tokenExpiry = timeProvider.GetUtcNow().AddDays(7);
+        var now = timeProvider.GetUtcNow();
+        var tokenExpiry = now.AddDays(7);
+
         var userToken = new UserToken(
             userId: user.Id,
             sessionId: sessionId,
             type: UserTokenType.RefreshToken,
             tokenHash: hashedRefreshToken,
-            expiry: tokenExpiry
+            expiry: tokenExpiry,
+            createdAt: now
         );
 
         // 6. Update Aggregate State

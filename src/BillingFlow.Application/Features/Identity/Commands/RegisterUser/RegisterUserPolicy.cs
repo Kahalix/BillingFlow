@@ -11,7 +11,7 @@ namespace BillingFlow.Application.Features.Identity.Commands.RegisterUser;
 /// </summary>
 public class RegisterUserPolicy(ICurrentUserService currentUserService) : IAuthorizationPolicy<RegisterUserCommand>
 {
-    public Task<bool> CanExecuteAsync(RegisterUserCommand request, CancellationToken cancellationToken)
+    public Task<bool> AuthorizeAsync(RegisterUserCommand request, CancellationToken cancellationToken)
     {
         var creatorRole = currentUserService.UserRole;
         var isAuthorized = RoleHierarchy.CanManageRole(creatorRole, request.TargetRole);

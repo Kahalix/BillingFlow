@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using BillingFlow.Api.Infrastructure;
 
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.OpenApi.Models;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -17,7 +18,42 @@ public static class DependencyInjection
     {
         services.AddControllers();
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+
+        // Swagger Configuration with JWT Bearer Auth
+        services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new OpenApiInfo { Title = "BillingFlow API", Version = "v1" });
+
+            // 1. Define the security scheme (UPDATED for automatic 'Bearer ' prefix)
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Description = "Enter your JWT token directly below. Swagger will automatically add the 'Bearer ' prefix.",
+                Name = "Authorization",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT"
+            });
+
+            // 2. Apply the scheme globally
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        },
+                        Scheme = "oauth2",
+                        Name = "Bearer",
+                        In = ParameterLocation.Header
+                    },
+                    [] // Empty array means no specific OAuth scopes are required
+                }
+            });
+        });
 
         // Modern Exception Handling (.NET 8 standard)
         services.AddExceptionHandler<GlobalExceptionHandler>();

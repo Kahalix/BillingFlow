@@ -6,5 +6,4 @@ namespace BillingFlow.Application.Authorization.Requirements;
 /// </summary>
 public interface IRequirePermission
 {
-    string Permission { get; }
 }

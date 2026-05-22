@@ -15,7 +15,7 @@ public class ChangeUserRolePolicy(
     ICurrentUserService currentUserService,
     IApplicationDbContext context) : IAuthorizationPolicy<ChangeUserRoleCommand>
 {
-    public async Task<bool> CanExecuteAsync(ChangeUserRoleCommand request, CancellationToken cancellationToken)
+    public async Task<bool> AuthorizeAsync(ChangeUserRoleCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId;
         var currentUserRole = currentUserService.UserRole;
