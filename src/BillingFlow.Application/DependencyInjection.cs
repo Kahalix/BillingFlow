@@ -4,6 +4,7 @@ using System.Reflection;
 
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Behaviors;
+using BillingFlow.Application.Features.Clients.Queries.GetClients;
 using BillingFlow.Application.Features.Identity.Commands.ActivateUser;
 using BillingFlow.Application.Features.Identity.Commands.ChangeUserRole;
 using BillingFlow.Application.Features.Identity.Commands.InitiateUserEmailChange;
@@ -52,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthorizationPolicy<ChangeUserRoleCommand>, ChangeUserRolePolicy>();
         services.AddScoped<IAuthorizationPolicy<SuspendUserCommand>, SuspendUserPolicy>();
         services.AddScoped<IAuthorizationPolicy<InitiateUserEmailChangeCommand>, InitiateUserEmailChangePolicy>();
+        services.AddScoped<IAuthorizationPolicy<GetClientsQuery>, GetClientsPolicy>();
 
         return services;
     }

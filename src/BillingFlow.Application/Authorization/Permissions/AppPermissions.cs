@@ -19,6 +19,10 @@ public static class AppPermissions
     public const string ClientsRead = "clients.read";
     public const string ClientsCreate = "clients.create";
     public const string ClientsSuspend = "clients.suspend";
+    public const string ClientsActivate = "clients.activate";
+    public const string ClientsArchive = "clients.archive";
+    public const string ClientsUpdate = "clients.update";
+    public const string ClientsRestore = "clients.restore";
 
     // Invoices
     public const string InvoicesRead = "invoices.read";

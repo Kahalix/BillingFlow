@@ -43,4 +43,15 @@ public class ConsoleEmailSender(ILogger<ConsoleEmailSender> logger) : IEmailSend
 
         return Task.CompletedTask;
     }
+
+    public Task SendClientSuspensionNoticeAsync(string toEmail, string companyName, CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("========== MOCK EMAIL SENDER ==========");
+        logger.LogInformation("To: {Email}", toEmail);
+        logger.LogInformation("Subject: Notice of Account Suspension");
+        logger.LogInformation("Body: Dear Customer, your billing profile for '{CompanyName}' has been suspended. Please contact our support team to resolve this issue.", companyName);
+        logger.LogInformation("=======================================");
+
+        return Task.CompletedTask;
+    }
 }

@@ -94,7 +94,11 @@ public static class AuthorizationExtensions
             // Clients
             .AddPolicy(AppPermissions.ClientsRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsRead)))
             .AddPolicy(AppPermissions.ClientsCreate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsCreate)))
+            .AddPolicy(AppPermissions.ClientsUpdate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsUpdate)))
             .AddPolicy(AppPermissions.ClientsSuspend, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsSuspend)))
+            .AddPolicy(AppPermissions.ClientsActivate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsActivate)))
+            .AddPolicy(AppPermissions.ClientsArchive, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsArchive)))
+            .AddPolicy(AppPermissions.ClientsRestore, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ClientsRestore)))
 
             // Invoices
             .AddPolicy(AppPermissions.InvoicesRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.InvoicesRead)))
