@@ -1,5 +1,6 @@
 // File: src/BillingFlow.Infrastructure/Database/Configurations/ClientConfiguration.cs
 using BillingFlow.Domain.Entities;
+using BillingFlow.Domain.Enums;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -21,6 +22,9 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.HasIndex(c => c.UserId)
             .IsUnique()
             .HasFilter("[UserId] IS NOT NULL");
+
+        // Enforce the Enterprise Soft-Delete global query filter
+        builder.HasQueryFilter(c => c.Status != ClientStatus.Archived);
 
         // 2. Company Details & Unique Tax Index mapping
         builder.Property(c => c.CompanyName)
