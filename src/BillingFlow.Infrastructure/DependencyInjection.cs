@@ -5,6 +5,8 @@ using BillingFlow.Infrastructure.BackgroundJobs;
 using BillingFlow.Infrastructure.Database;
 using BillingFlow.Infrastructure.Database.Interceptors;
 using BillingFlow.Infrastructure.Identity;
+using BillingFlow.Infrastructure.Invoices;
+using BillingFlow.Infrastructure.Projections;
 
 using Hangfire;
 using Hangfire.SqlServer;
@@ -13,6 +15,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
+using QuestPDF.Infrastructure;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -38,6 +42,9 @@ public static class DependencyInjection
 
         // Interface mapping for architecture boundary compliance
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<BillingDbContext>());
+        services.AddSingleton<IDbConnectionFactory, SqlConnectionFactory>();
+
+        services.AddScoped<IClientBalanceProjectionWriter, ClientBalanceProjectionWriter>();
 
         // 2. Identity Services
         services.AddHttpContextAccessor(); // Required to read claims from HTTP request
@@ -46,11 +53,19 @@ public static class DependencyInjection
         services.AddSingleton<ITokenGenerator, TokenGenerator>();
         services.AddSingleton<ITokenHashService, TokenHashService>();
         services.AddSingleton<IPermissionClaimsProvider, PermissionClaimsProvider>();
+        services.AddSingleton<IInvoiceNumberGenerator, SequenceInvoiceNumberGenerator>();
 
         // System time abstraction for unit testing
         services.AddSingleton(TimeProvider.System);
 
         // 3. External Services (Stripe, Hangfire, etc.)
+
+        // 1. Configure Global Infrastructure Settings
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        // 2. Register Services
+        services.AddSingleton<IInvoicePdfRenderer, QuestPdfInvoiceRenderer>();
+
 
         // Use ConsoleEmailSender for local development. 
         // For production, a real implementation (e.g., SendGrid/SMTP) should be registered.

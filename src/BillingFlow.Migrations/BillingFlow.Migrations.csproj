@@ -5,8 +5,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="BusinessDataMigrations\" />
     <Folder Include="Programmability\Views\" />
-    <Folder Include="Programmability\Procedures\" />
   </ItemGroup>
 
   <ItemGroup>

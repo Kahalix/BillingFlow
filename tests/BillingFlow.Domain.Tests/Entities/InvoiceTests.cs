@@ -1,0 +1,136 @@
+// File: tests/BillingFlow.Domain.Tests/Entities/InvoiceTests.cs
+using System;
+using System.Linq;
+
+using BillingFlow.Domain.Entities;
+using BillingFlow.Domain.Enums;
+using BillingFlow.Domain.Events;
+using BillingFlow.Domain.Exceptions;
+
+using FluentAssertions;
+
+using Xunit;
+
+namespace BillingFlow.Domain.Tests.Entities;
+
+public class InvoiceTests
+{
+    private readonly Guid _clientId = Guid.NewGuid();
+    private readonly Guid _ownerUserId = Guid.NewGuid();
+    private readonly string _invoiceNumber = "INV/2026/05/00001";
+    private readonly DateTimeOffset _issueDate = DateTimeOffset.UtcNow;
+
+    [Fact]
+    public void Create_ValidData_ShouldInitializeInDraftState()
+    {
+        // Act
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate, 14);
+
+        // Assert
+        invoice.ClientId.Should().Be(_clientId);
+        invoice.OwnerUserId.Should().Be(_ownerUserId);
+        invoice.InvoiceNumber.Should().Be(_invoiceNumber);
+        invoice.Status.Should().Be(InvoiceStatus.Draft);
+        invoice.TotalAmount.Should().Be(0);
+        invoice.Items.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddLineItem_WhenInDraftStatus_ShouldRecalculateTotal()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate);
+
+        // Act
+        invoice.AddLineItem("Consulting Services", 1000m, 2); // 2000
+        invoice.AddLineItem("Server Hosting", 500m, 1);       // 500
+
+        // Assert
+        invoice.Items.Should().HaveCount(2);
+        invoice.TotalAmount.Should().Be(2500m);
+    }
+
+    [Fact]
+    public void Issue_WithLineItems_ShouldTransitionToUnpaidAndEmitEvent()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate);
+        invoice.AddLineItem("Consulting", 1000m, 1);
+
+        // Act
+        invoice.Issue();
+
+        // Assert
+        invoice.Status.Should().Be(InvoiceStatus.Unpaid);
+
+        var domainEvent = invoice.DomainEvents.SingleOrDefault(e => e is InvoiceGeneratedEvent);
+        domainEvent.Should().NotBeNull();
+        ((InvoiceGeneratedEvent)domainEvent!).TotalAmount.Should().Be(1000m);
+    }
+
+    [Fact]
+    public void Issue_WithoutLineItems_ShouldThrowDomainException()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate);
+
+        // Act & Assert
+        Action action = () => invoice.Issue();
+        action.Should().Throw<DomainException>()
+            .WithMessage("Cannot issue an invoice without any line items.");
+    }
+
+    [Fact]
+    public void ApplyPayment_PartialAmount_ShouldTransitionToPartiallyPaid()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate);
+        invoice.AddLineItem("Consulting", 1000m, 1);
+        invoice.Issue();
+
+        // Act
+        invoice.ApplyPayment(400m);
+
+        // Assert
+        invoice.Status.Should().Be(InvoiceStatus.PartiallyPaid);
+        invoice.PaidAmount.Should().Be(400m);
+    }
+
+    [Fact]
+    public void ApplyPayment_FullAmount_ShouldTransitionToPaidAndEmitEvent()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate);
+        invoice.AddLineItem("Consulting", 1000m, 1);
+        invoice.Issue();
+
+        // Act
+        invoice.ApplyPayment(1000m);
+
+        // Assert
+        invoice.Status.Should().Be(InvoiceStatus.Paid);
+
+        var domainEvent = invoice.DomainEvents.OfType<InvoicePaidEvent>().SingleOrDefault();
+        domainEvent.Should().NotBeNull();
+        domainEvent!.TotalInvoiceAmount.Should().Be(1000m);
+    }
+
+    [Fact]
+    public void Cancel_WhenUnpaid_ShouldTransitionToCanceledAndEmitEvent()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate);
+        invoice.AddLineItem("Consulting", 1000m, 1);
+        invoice.Issue(); // Translates to Unpaid
+
+        // Act
+        invoice.Cancel();
+
+        // Assert
+        invoice.Status.Should().Be(InvoiceStatus.Canceled);
+
+        var domainEvent = invoice.DomainEvents.OfType<InvoiceCanceledEvent>().SingleOrDefault();
+        domainEvent.Should().NotBeNull();
+        domainEvent!.TotalAmount.Should().Be(1000m);
+    }
+}

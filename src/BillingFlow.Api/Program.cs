@@ -58,3 +58,5 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

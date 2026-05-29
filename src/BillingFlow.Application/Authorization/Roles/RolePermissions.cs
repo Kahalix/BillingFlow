@@ -15,11 +15,18 @@ public static class RolePermissions
         AppPermissions.UsersCreate, AppPermissions.UsersRead,
         AppPermissions.UsersActivate, AppPermissions.UsersChangeRole,
         AppPermissions.UsersChangeEmail, AppPermissions.UsersSuspend,
+
         AppPermissions.ClientsRead, AppPermissions.ClientsArchive,
         AppPermissions.ClientsRestore,
         AppPermissions.ClientsCreate, AppPermissions.ClientsUpdate,
         AppPermissions.ClientsSuspend, AppPermissions.ClientsActivate,
+
         AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate,
+
+        AppPermissions.ProvidedServicesCreate,
+
+        AppPermissions.ReportsRead,
+
         AppPermissions.PaymentsRead, AppPermissions.PaymentsRefund
     ];
 
@@ -28,23 +35,39 @@ public static class RolePermissions
         AppPermissions.UsersCreate, AppPermissions.UsersRead,
         AppPermissions.UsersChangeEmail, AppPermissions.UsersSuspend,
         AppPermissions.UsersActivate, AppPermissions.UsersChangeRole,
+
         AppPermissions.ClientsRead, AppPermissions.ClientsArchive,
         AppPermissions.ClientsRestore,
         AppPermissions.ClientsCreate, AppPermissions.ClientsUpdate,
         AppPermissions.ClientsSuspend, AppPermissions.ClientsActivate,
-        AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate
+
+        AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate,
+        AppPermissions.InvoicesCancel,
+
+        AppPermissions.ProvidedServicesCreate,
+
+        AppPermissions.ReportsRead
+
     ];
 
     private static readonly IReadOnlyList<string> AccountantPermissions =
     [
         AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate,
+        AppPermissions.InvoicesCancel,
+
+        AppPermissions.ReportsRead,
+
         AppPermissions.PaymentsRead, AppPermissions.PaymentsRefund
     ];
 
     private static readonly IReadOnlyList<string> EmployeePermissions =
     [
         AppPermissions.UsersCreate, AppPermissions.UsersRead,
+
         AppPermissions.ClientsRead, AppPermissions.ClientsUpdate,
+
+        AppPermissions.ProvidedServicesCreate,
+
         AppPermissions.InvoicesRead
     ];
 
@@ -53,6 +76,7 @@ public static class RolePermissions
         // Static permissions act as "module entry pass". 
         // Data ownership (e.g., "can I read THIS specific invoice") must be validated by IAuthorizationPolicy.
         AppPermissions.InvoicesRead,
+
         AppPermissions.PaymentsRead
     ];
 
