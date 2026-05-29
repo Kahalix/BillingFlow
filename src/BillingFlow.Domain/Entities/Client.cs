@@ -43,7 +43,7 @@ public class Client : Entity, IAggregateRoot
     /// </summary>
     public static Client Create(Guid? userId, string companyName, string taxId, Address address)
     {
-        if (userId == Guid.Empty)
+        if (userId.HasValue && userId.Value == Guid.Empty)
             throw new DomainException("User ID cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(companyName))

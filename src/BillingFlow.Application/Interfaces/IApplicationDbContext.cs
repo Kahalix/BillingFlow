@@ -10,6 +10,9 @@ public interface IApplicationDbContext
     DbSet<AppUser> Users { get; }
     DbSet<UserToken> UserTokens { get; }
     DbSet<Client> Clients { get; }
+    DbSet<Invoice> Invoices { get; }
+    DbSet<InvoiceItem> InvoiceItems { get; }
+    DbSet<ProvidedService> ProvidedServices { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

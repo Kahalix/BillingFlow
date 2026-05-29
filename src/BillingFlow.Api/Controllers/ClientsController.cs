@@ -9,9 +9,11 @@ using BillingFlow.Application.Features.Clients.Commands.RestoreClient;
 using BillingFlow.Application.Features.Clients.Commands.SuspendClient;
 using BillingFlow.Application.Features.Clients.Commands.UnlinkClientUser;
 using BillingFlow.Application.Features.Clients.Commands.UpdateClient;
+using BillingFlow.Application.Features.Clients.Queries.GetClientBalance;
 using BillingFlow.Application.Features.Clients.Queries.GetClientDetails;
 using BillingFlow.Application.Features.Clients.Queries.GetClients;
 using BillingFlow.Application.Features.Clients.Queries.GetMyClientDetails;
+using BillingFlow.Application.Features.ProvidedServices.Commands.AddProvidedService;
 
 using MediatR;
 
@@ -72,6 +74,23 @@ public class ClientsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetClientDetailsQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retrieves the materialized financial balance for a specific client.
+    /// Uses ultra-fast read models completely bypassing the domain.
+    /// </summary>
+    [HttpGet("{id:guid}/balance")]
+    [Authorize(Policy = AppPermissions.ClientsRead)]
+    [ProducesResponseType(typeof(ClientBalanceReadModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetBalance(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetClientBalanceQuery(id), cancellationToken);
         return Ok(result);
     }
 
@@ -238,4 +257,34 @@ public class ClientsController(ISender sender) : ControllerBase
         await sender.Send(new UnlinkClientUserCommand(id), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Registers a new billable service for a specific client.
+    /// Restricted to Back-Office employees.
+    /// </summary>
+    [HttpPost("{id:guid}/services")]
+    [Authorize(Policy = AppPermissions.ProvidedServicesCreate)]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddProvidedService(
+        [FromRoute] Guid id,
+        [FromBody] AddProvidedServiceRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new AddProvidedServiceCommand(
+            id,
+            request.Description,
+            request.Amount,
+            request.PerformedAt
+        );
+
+        var serviceId = await sender.Send(command, cancellationToken);
+
+        // Zwracamy po prostu ID (lub w przyszłości Location Header TODO CreatedAtAction)
+        return Created(string.Empty, new { Id = serviceId });
+    }
+
 }

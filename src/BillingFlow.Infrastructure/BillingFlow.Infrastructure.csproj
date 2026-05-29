@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+	<PackageReference Include="QuestPDF" />
   </ItemGroup>
 
    <ItemGroup>

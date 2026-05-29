@@ -27,6 +27,13 @@ public static class AppPermissions
     // Invoices
     public const string InvoicesRead = "invoices.read";
     public const string InvoicesGenerate = "invoices.generate";
+    public const string InvoicesCancel = "invoices.cancel";
+
+    // Reports
+    public const string ReportsRead = "reports.read";
+
+    // ProvidedServices
+    public const string ProvidedServicesCreate = "services.create";
 
     // Payments
     public const string PaymentsRead = "payments.read";

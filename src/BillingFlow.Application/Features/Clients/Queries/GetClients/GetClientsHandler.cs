@@ -35,7 +35,6 @@ public class GetClientsHandler(IApplicationDbContext context)
 
         query = query.OrderBy(c => c.CompanyName);
 
-        // Używamy zoptymalizowanej metody z DTO zmapowanym na etapie LINQ
         var projectedQuery = query.Select(c => new ClientSummaryDto(
             c.Id,
             c.CompanyName,
@@ -43,7 +42,6 @@ public class GetClientsHandler(IApplicationDbContext context)
             c.Status
         ));
 
-        // Magia PaginatedList.CreateAsync
         return await PaginatedList<ClientSummaryDto>.CreateAsync(
             projectedQuery,
             request.PageNumber,

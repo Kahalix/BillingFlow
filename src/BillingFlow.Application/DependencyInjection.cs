@@ -10,6 +10,9 @@ using BillingFlow.Application.Features.Identity.Commands.ChangeUserRole;
 using BillingFlow.Application.Features.Identity.Commands.InitiateUserEmailChange;
 using BillingFlow.Application.Features.Identity.Commands.RegisterUser;
 using BillingFlow.Application.Features.Identity.Commands.SuspendUser;
+using BillingFlow.Application.Features.Invoices.Common;
+using BillingFlow.Application.Features.Invoices.Queries.DownloadInvoicePdf;
+using BillingFlow.Application.Features.Invoices.Queries.GetInvoiceDetails;
 
 using FluentValidation;
 
@@ -46,14 +49,26 @@ public static class DependencyInjection
         });
 
         // 3. Register Specific Authorization Policies
-        // (Uncomment and add new policies here as we build the application features)
+        // (add new policies here as we build the application features)
         // services.AddScoped<IAuthorizationPolicy<GetInvoiceDetailsQuery>, GetInvoiceDetailsPolicy>();
+
+        // Users
         services.AddScoped<IAuthorizationPolicy<RegisterUserCommand>, RegisterUserPolicy>();
         services.AddScoped<IAuthorizationPolicy<ActivateUserCommand>, ActivateUserPolicy>();
         services.AddScoped<IAuthorizationPolicy<ChangeUserRoleCommand>, ChangeUserRolePolicy>();
         services.AddScoped<IAuthorizationPolicy<SuspendUserCommand>, SuspendUserPolicy>();
         services.AddScoped<IAuthorizationPolicy<InitiateUserEmailChangeCommand>, InitiateUserEmailChangePolicy>();
+
+        // Clients
         services.AddScoped<IAuthorizationPolicy<GetClientsQuery>, GetClientsPolicy>();
+
+        // Invoices
+        services.AddScoped<IAuthorizationPolicy<GetInvoiceDetailsQuery>, GetInvoiceDetailsPolicy>();
+        services.AddScoped<IAuthorizationPolicy<DownloadInvoicePdfQuery>, DownloadInvoicePdfPolicy>();
+
+
+        // 4. Register Shared Feature Services & Data Providers
+        services.AddScoped<IInvoiceDataProvider, InvoiceDataProvider>();
 
         return services;
     }
