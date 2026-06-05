@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Queries/GetPayments/GetPaymentsQuery.cs
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;

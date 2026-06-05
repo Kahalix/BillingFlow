@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Queries/GetInvoices/GetInvoicesHandler.cs
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;

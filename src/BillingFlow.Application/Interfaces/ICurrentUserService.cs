@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/ICurrentUserService.cs
 using BillingFlow.Domain.Enums;
 
 namespace BillingFlow.Application.Interfaces;

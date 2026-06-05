@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Database/Interceptors/DispatchDomainEventsInterceptor.cs
 using BillingFlow.Domain.Common;
 
 using MediatR;

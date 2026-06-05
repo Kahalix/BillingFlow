@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Authorization/Models/CurrentUser.cs
 using BillingFlow.Domain.Enums;
 
 namespace BillingFlow.Application.Authorization.Models;

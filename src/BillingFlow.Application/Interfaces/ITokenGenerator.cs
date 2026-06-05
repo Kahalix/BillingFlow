@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/ITokenGenerator.cs
 using BillingFlow.Domain.Entities;
 
 namespace BillingFlow.Application.Interfaces;

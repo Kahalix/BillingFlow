@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Queries/DownloadInvoicePdf/DownloadInvoicePdfQuery.cs
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;

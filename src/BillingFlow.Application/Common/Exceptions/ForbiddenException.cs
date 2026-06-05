@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Common/Exceptions/ForbiddenException.cs
 namespace BillingFlow.Application.Common.Exceptions;
 
 /// <summary>

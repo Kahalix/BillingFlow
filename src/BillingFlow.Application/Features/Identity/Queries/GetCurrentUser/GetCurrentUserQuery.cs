@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Queries/GetCurrentUser/GetCurrentUserQuery.cs
 using BillingFlow.Application.Authorization.Requirements;
 
 using MediatR;

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Authorization/Requirements/IAuthorizationPolicy.cs
 namespace BillingFlow.Application.Authorization.Requirements;
 
 /// <summary>

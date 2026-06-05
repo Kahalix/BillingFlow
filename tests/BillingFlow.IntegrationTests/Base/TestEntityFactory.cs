@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.IntegrationTests/Base/TestEntityFactory.cs
 using System;
 using System.Threading.Tasks;
 

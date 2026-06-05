@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.IntegrationTests/DatabaseTests/ClientBalanceProjectionTests.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;

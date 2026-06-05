@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Events/ClientSuspendedEvent.cs
 using System;
 
 using BillingFlow.Domain.Common;

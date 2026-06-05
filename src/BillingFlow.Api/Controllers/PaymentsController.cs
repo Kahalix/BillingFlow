@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/Controllers/PaymentsController.cs
 using System.Threading;
 using System.Threading.Tasks;
 

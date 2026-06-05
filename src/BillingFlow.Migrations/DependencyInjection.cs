@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/DependencyInjection.cs
 using FluentMigrator.Runner;
 
 using Microsoft.Extensions.Configuration;

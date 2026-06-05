@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/Controllers/WebhooksController.cs
 using System.IO;
 using System.Threading.Tasks;
 

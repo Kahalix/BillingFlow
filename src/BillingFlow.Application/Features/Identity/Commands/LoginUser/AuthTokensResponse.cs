@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/LoginUser/AuthTokensResponse.cs
 namespace BillingFlow.Application.Features.Identity.Commands.LoginUser;
 
 /// <summary>

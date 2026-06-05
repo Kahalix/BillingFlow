@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Entities/AppUser.cs
 using BillingFlow.Domain.Common;
 using BillingFlow.Domain.Enums;
 using BillingFlow.Domain.Events;

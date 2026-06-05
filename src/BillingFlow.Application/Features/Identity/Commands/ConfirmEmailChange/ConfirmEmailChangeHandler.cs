@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/ConfirmEmailChange/ConfirmEmailChangeHandler.cs
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
 using BillingFlow.Domain.Exceptions;

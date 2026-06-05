@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Commands/LinkClientUser/LinkClientUserCommand.cs
 using BillingFlow.Application.Authorization.Requirements;
 
 using MediatR;

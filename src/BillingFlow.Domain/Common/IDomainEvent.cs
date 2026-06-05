@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Common/IDomainEvent.cs
 using MediatR;
 
 namespace BillingFlow.Domain.Common;

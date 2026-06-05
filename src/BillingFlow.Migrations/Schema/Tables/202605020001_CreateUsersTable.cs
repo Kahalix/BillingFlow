@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/Schema/Tables/202605020001_CreateUsersTable.cs
 using FluentMigrator;
 
 namespace BillingFlow.Migrations.Schema.Tables;

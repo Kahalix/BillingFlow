@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/Schema/Indexes/202605020101_AddInvoiceNumberIndex.cs
 using FluentMigrator;
 
 namespace BillingFlow.Migrations.Schema.Indexes;

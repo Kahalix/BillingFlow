@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IDbConnectionFactory.cs
 using System.Data;
 
 namespace BillingFlow.Application.Interfaces;

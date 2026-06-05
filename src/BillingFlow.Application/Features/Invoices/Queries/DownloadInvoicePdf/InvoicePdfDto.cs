@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Queries/DownloadInvoicePdf/InvoicePdfDto.cs
 namespace BillingFlow.Application.Features.Invoices.Queries.DownloadInvoicePdf;
 
 /// <summary>

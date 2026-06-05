@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Authorization/PermissionRequirement.cs
 using Microsoft.AspNetCore.Authorization;
 
 namespace BillingFlow.Infrastructure.Authorization;

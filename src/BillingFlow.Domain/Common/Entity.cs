@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Common/Entity.cs
 namespace BillingFlow.Domain.Common;
 
 /// <summary>

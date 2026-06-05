@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Invoices/QuestPdfInvoiceRenderer.cs
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;

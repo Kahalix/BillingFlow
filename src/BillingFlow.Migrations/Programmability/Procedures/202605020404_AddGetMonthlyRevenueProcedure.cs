@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/Programmability/Procedures/202605020404_AddGetMonthlyRevenueProcedure.cs
 using FluentMigrator;
 
 namespace BillingFlow.Migrations.Programmability.Procedures;

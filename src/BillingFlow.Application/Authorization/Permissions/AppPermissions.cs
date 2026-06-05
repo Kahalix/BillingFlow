@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Authorization/Permissions/AppPermissions.cs
 namespace BillingFlow.Application.Authorization.Permissions;
 
 /// <summary>

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Behaviors/AuthorizationBehavior.cs
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;

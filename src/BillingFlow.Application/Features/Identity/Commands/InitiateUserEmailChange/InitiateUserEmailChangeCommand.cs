@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/InitiateUserEmailChange/InitiateUserEmailChangeCommand.cs
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Authorization.Requirements;
 

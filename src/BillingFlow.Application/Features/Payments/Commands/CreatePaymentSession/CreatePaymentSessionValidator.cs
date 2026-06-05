@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Commands/CreatePaymentSession/CreatePaymentSessionValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Payments.Commands.CreatePaymentSession;

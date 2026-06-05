@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Queries/GetInvoices/InvoiceSummaryDto.cs
 using System;
 
 using BillingFlow.Domain.Enums;

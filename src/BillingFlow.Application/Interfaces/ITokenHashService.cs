@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/ITokenHashService.cs
 namespace BillingFlow.Application.Interfaces;
 
 /// <summary>

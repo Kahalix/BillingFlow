@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Authorization/Roles/RoleHierarchy.cs
 using BillingFlow.Domain.Enums;
 
 namespace BillingFlow.Application.Authorization.Roles;

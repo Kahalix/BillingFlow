@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Database/Configurations/UserTokenConfiguration.cs
 using BillingFlow.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

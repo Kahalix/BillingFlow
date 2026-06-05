@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/Programmability/Sequences/202605020403_AddInvoiceSequence.cs
 using FluentMigrator;
 
 namespace BillingFlow.Migrations.Programmability.Sequences;

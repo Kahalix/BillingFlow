@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.IntegrationTests/EndpointTests/ReportsEndpointsTests.cs
 using System;
 using System.Collections.Generic;
 using System.Net;

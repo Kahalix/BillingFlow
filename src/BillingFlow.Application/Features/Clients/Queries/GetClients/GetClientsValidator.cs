@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetClients/GetClientsValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Clients.Queries.GetClients;

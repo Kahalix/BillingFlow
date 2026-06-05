@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetMyClientDetails/GetMyClientDetailsQuery.cs
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Features.Clients.Queries.GetClientDetails;
 

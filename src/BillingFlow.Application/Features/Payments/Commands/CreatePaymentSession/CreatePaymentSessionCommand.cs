@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Commands/CreatePaymentSession/CreatePaymentSessionCommand.cs
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;

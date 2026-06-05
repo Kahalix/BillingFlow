@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Events/ClientArchivedEvent.cs
 using BillingFlow.Domain.Common;
 
 namespace BillingFlow.Domain.Events;

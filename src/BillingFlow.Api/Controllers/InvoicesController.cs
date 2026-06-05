@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/Controllers/InvoicesController.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;

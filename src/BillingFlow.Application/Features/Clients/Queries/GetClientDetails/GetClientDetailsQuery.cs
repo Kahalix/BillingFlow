@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetClientDetails/GetClientDetailsQuery.cs
 using BillingFlow.Application.Authorization.Requirements;
 
 using MediatR;

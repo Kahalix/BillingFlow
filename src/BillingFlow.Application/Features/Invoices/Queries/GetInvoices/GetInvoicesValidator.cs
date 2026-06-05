@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Queries/GetInvoices/GetInvoicesValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Invoices.Queries.GetInvoices;

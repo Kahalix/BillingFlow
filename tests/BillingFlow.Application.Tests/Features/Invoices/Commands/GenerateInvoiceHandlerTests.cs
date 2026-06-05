@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.Application.Tests/Features/Invoices/Commands/GenerateInvoiceHandlerTests.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;

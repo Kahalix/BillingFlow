@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Database/Configurations/ClientConfiguration.cs
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
 

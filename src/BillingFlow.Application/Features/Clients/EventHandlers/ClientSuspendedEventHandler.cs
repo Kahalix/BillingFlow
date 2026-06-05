@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/EventHandlers/ClientSuspendedEventHandler.cs
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Events;
 

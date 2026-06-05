@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/ProvidedServices/Commands/AddProvidedService/AddProvidedServiceCommand.cs
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;

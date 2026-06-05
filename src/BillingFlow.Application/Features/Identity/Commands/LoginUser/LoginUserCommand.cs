@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/LoginUser/LoginUserCommand.cs
 using BillingFlow.Application.Authorization.Requirements;
 
 using MediatR;

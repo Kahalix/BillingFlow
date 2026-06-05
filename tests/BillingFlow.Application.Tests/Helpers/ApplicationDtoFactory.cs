@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.Application.Tests/Helpers/ApplicationDtoFactory.cs
 using System;
 using System.Collections.Generic;
 

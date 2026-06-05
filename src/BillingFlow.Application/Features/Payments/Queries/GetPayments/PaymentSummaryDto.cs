@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Queries/GetPayments/PaymentSummaryDto.cs
 using System;
 
 using BillingFlow.Domain.Enums;

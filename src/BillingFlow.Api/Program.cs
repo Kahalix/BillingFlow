@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/Program.cs
 using BillingFlow.Api.Extensions;
 using BillingFlow.Api.Infrastructure;
 using Hangfire;

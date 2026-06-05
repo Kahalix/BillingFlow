@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Commands/CancelInvoice/CancelInvoiceCommand.cs
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;

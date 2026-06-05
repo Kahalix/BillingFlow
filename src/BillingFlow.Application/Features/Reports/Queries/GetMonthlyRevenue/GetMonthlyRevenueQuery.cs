@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Reports/Queries/GetMonthlyRevenue/GetMonthlyRevenueQuery.cs
 using System.Collections.Generic;
 
 using BillingFlow.Application.Authorization.Requirements;

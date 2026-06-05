@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Commands/CreateManualPayment/CreateManualPaymentCommand.cs
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;

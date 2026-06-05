@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.IntegrationTests/Base/SharedTestCollection.cs
 using Xunit;
 
 namespace BillingFlow.IntegrationTests.Base;

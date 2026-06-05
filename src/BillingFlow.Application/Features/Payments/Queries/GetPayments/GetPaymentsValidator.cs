@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Queries/GetPayments/GetPaymentsValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Payments.Queries.GetPayments;

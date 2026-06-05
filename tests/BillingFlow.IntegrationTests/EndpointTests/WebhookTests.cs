@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.IntegrationTests/EndpointTests/WebhookTests.cs
 using System;
 using System.Net;
 using System.Net.Http;

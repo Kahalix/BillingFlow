@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Authorization/PermissionAuthorizationHandler.cs
 using BillingFlow.Application.Authorization;
 
 using Microsoft.AspNetCore.Authorization;

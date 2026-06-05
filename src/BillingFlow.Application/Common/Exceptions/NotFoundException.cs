@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Common/Exceptions/NotFoundException.cs
 namespace BillingFlow.Application.Common.Exceptions;
 
 /// <summary>

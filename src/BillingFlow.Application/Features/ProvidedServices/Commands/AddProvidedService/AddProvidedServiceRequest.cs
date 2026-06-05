@@ -1,5 +1,3 @@
-// File: src/BillingFlow.Application/Features/ProvidedServices/Commands/AddProvidedService/AddProvidedServiceRequest.cs
-
 namespace BillingFlow.Application.Features.ProvidedServices.Commands.AddProvidedService;
 
 public record AddProvidedServiceRequest(

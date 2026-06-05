@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/DependencyInjection.cs
 using System.Threading.RateLimiting;
 
 using BillingFlow.Api.Infrastructure;

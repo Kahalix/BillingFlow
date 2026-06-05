@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/ActivateUser/ActivateUserPolicy.cs
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Authorization.Roles;
 using BillingFlow.Application.Interfaces;

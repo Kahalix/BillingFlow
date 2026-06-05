@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/Controllers/AuthController.cs
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Features.Identity.Commands.ConfirmEmailChange;
 using BillingFlow.Application.Features.Identity.Commands.LoginUser;

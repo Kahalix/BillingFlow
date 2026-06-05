@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetMyClientDetails/GetMyClientDetailsHandler.cs
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Features.Clients.Queries.GetClientDetails;
 using BillingFlow.Application.Features.Clients.Queries.Projections;

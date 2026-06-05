@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.Domain.Tests/Entities/InvoiceTests.cs
 using System;
 using System.Linq;
 

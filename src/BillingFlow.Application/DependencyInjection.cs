@@ -1,5 +1,3 @@
-// File: src/BillingFlow.Application/DependencyInjection.cs
-
 using System.Reflection;
 
 using BillingFlow.Application.Authorization.Requirements;

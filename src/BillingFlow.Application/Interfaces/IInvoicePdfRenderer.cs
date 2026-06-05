@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IInvoicePdfRenderer.cs
 using System.Threading;
 using System.Threading.Tasks;
 

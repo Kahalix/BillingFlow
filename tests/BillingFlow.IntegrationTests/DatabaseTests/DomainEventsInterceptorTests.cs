@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.IntegrationTests/DatabaseTests/DomainEventsInterceptorTests.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;

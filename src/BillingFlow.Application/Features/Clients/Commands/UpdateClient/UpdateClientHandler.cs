@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Commands/UpdateClient/UpdateClientHandler.cs
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.ValueObjects;

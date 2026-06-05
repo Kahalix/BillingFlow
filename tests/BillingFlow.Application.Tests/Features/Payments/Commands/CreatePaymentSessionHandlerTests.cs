@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.Application.Tests/Features/Payments/Commands/CreatePaymentSessionHandlerTests.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;

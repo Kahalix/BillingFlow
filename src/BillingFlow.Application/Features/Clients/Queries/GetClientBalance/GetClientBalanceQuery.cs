@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetClientBalance/GetClientBalanceQuery.cs
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;

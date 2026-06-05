@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Authorization/Roles/RolePermissions.cs
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Domain.Enums;
 

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Enums/ClientStatus.cs
 namespace BillingFlow.Domain.Enums;
 
 public enum ClientStatus

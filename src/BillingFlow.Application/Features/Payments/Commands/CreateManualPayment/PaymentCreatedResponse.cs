@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Commands/CreateManualPayment/PaymentCreatedResponse.cs
 using System;
 
 namespace BillingFlow.Application.Features.Payments.Commands.CreateManualPayment;

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IApplicationDbContext.cs
 using BillingFlow.Domain.Entities;
 
 using Microsoft.EntityFrameworkCore;

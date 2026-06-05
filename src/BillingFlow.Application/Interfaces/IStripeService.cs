@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IStripeService.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;

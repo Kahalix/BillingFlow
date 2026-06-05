@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/ChangeUserRole/ChangeUserRoleCommand.cs
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Domain.Enums;

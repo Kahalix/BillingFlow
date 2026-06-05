@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetClients/GetClientsPolicy.cs
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;

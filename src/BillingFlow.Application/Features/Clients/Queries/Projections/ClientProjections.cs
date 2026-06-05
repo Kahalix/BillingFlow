@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/Projections/ClientProjections.cs
 using System.Linq.Expressions;
 
 using BillingFlow.Application.Features.Clients.Queries.GetClientDetails;

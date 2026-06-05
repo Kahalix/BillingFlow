@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/LoginUser/LoginUserValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Identity.Commands.LoginUser;

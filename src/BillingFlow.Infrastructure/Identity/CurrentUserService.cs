@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Identity/CurrentUserService.cs
 using System.Security.Claims;
 
 using BillingFlow.Application.Authorization;

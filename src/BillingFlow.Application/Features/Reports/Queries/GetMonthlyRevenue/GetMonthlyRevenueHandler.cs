@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Reports/Queries/GetMonthlyRevenue/GetMonthlyRevenueHandler.cs
 using System;
 using System.Collections.Generic;
 using System.Data;

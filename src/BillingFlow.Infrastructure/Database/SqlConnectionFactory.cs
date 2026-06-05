@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Database/SqlConnectionFactory.cs
 using System.Data;
 
 using BillingFlow.Application.Interfaces;

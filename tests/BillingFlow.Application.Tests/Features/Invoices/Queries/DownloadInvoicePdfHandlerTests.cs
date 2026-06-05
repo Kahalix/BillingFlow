@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.Application.Tests/Features/Invoices/Queries/DownloadInvoicePdfHandlerTests.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;

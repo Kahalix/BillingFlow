@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/EventHandlers/RevertDebtOnInvoiceCanceled.cs
 using System.Threading;
 using System.Threading.Tasks;
 

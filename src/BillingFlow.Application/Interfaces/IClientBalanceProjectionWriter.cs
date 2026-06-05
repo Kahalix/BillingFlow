@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IClientBalanceProjectionWriter.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;

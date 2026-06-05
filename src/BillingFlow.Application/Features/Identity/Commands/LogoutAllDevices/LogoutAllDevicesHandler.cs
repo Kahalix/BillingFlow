@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/LogoutAllDevices/LogoutAllDevicesHandler.cs
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
 

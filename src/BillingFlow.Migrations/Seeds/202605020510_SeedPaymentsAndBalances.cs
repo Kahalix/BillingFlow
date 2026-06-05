@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/Schema/Seeds/202605020510_SeedPaymentsAndBalances.cs
 using System;
 
 using BillingFlow.Domain.Enums;

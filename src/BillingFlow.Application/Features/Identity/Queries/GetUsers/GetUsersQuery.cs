@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Queries/GetUsers/GetUsersQuery.cs
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Common.Models;

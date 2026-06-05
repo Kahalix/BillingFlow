@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetClients/GetClientsHandler.cs
 using BillingFlow.Application.Common.Models;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;

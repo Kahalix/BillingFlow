@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Queries/GetUsers/GetUsersHandler.cs
 using BillingFlow.Application.Common.Models;
 using BillingFlow.Application.Interfaces;
 

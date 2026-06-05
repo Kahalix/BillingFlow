@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Commands/CreateManualPayment/CreateManualPaymentRequest.cs
 using System;
 
 using BillingFlow.Domain.Enums;

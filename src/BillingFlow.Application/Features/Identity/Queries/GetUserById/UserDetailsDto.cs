@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Queries/GetUserById/UserDetailsDto.cs
 using BillingFlow.Domain.Enums;
 
 namespace BillingFlow.Application.Features.Identity.Queries.GetUserById;

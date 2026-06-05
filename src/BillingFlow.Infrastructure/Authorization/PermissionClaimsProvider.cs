@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Authorization/PermissionClaimsProvider.cs
 using System.Security.Claims;
 
 using BillingFlow.Application.Authorization;

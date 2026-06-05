@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Identity/TokenHashService.cs
 using System.Security.Cryptography;
 using System.Text;
 

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IInvoiceNumberGenerator.cs
 using System.Threading;
 using System.Threading.Tasks;
 

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetClientDetails/ClientDetailsResponse.cs
 using BillingFlow.Domain.Enums;
 
 namespace BillingFlow.Application.Features.Clients.Queries.GetClientDetails;

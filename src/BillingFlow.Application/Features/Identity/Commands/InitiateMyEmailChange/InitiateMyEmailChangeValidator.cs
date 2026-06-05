@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/InitiateMyEmailChange/InitiateMyEmailChangeValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Identity.Commands.InitiateMyEmailChange;

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/DependencyInjection.cs
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Infrastructure.Authorization;
 using BillingFlow.Infrastructure.BackgroundJobs;

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/RequestPasswordReset/RequestPasswordResetHandler.cs
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;

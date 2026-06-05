@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Common/Models/InvoiceDetailsModel.cs
 using System;
 using System.Collections.Generic;
 

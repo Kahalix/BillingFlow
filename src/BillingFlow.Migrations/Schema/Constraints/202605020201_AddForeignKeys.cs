@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/Schema/Constraints/202605020201_AddForeignKeys.cs
 using FluentMigrator;
 
 namespace BillingFlow.Migrations.Schema.Constraints;

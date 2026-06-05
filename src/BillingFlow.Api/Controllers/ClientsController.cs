@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/Controllers/ClientsController.cs
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Common.Models;
 using BillingFlow.Application.Features.Clients.Commands.ActivateClient;

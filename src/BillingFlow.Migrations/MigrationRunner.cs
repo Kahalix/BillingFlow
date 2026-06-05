@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/MigrationRunner.cs
 using System;
 using System.Data;
 

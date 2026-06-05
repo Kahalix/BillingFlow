@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Commands/CreateManualPayment/CreateManualPaymentValidator.cs
 using System;
 
 using BillingFlow.Domain.Enums; // Wymagane dla metody rozszerzającej IsOfflineMethod()

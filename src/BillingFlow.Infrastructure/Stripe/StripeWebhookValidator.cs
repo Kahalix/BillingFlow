@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Stripe/StripeWebhookValidator.cs
 using System;
 
 using Stripe;

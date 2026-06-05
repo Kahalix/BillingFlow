@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetClients/GetClientsQuery.cs
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Common.Models;
 using BillingFlow.Domain.Enums;

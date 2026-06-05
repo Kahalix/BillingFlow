@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Authorization/CustomClaimTypes.cs
 namespace BillingFlow.Application.Authorization;
 
 /// <summary>

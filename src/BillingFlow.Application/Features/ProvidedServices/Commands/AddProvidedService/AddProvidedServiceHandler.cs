@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/ProvidedServices/Commands/AddProvidedService/AddProvidedServiceHandler.cs
 using System;
 using System.Linq;
 using System.Threading;

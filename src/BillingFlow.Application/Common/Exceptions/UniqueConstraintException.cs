@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Common/Exceptions/UniqueConstraintException.cs
 using System;
 
 namespace BillingFlow.Application.Common.Exceptions;

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Common/Models/PaginatedList.cs
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Common.Models;

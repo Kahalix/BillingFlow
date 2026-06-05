@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Commands/LinkClientUser/LinkClientUserValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Clients.Commands.LinkClientUser;

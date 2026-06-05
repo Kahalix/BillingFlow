@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.Application.Tests/Helpers/DomainTestFactory.cs
 using System;
 
 using BillingFlow.Domain.Common;

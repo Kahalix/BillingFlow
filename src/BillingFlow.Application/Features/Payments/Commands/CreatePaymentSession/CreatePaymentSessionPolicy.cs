@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Payments/Commands/CreatePaymentSession/CreatePaymentSessionPolicy.cs
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Commands/GenerateInvoice/GenerateInvoiceValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Invoices.Commands.GenerateInvoice;

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Enums/PaymentMethodExtensions.cs
 namespace BillingFlow.Domain.Enums;
 
 /// <summary>

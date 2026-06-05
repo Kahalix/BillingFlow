@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Queries/GetClientBalance/ClientBalanceReadModel.cs
 using System;
 
 namespace BillingFlow.Application.Features.Clients.Queries.GetClientBalance;

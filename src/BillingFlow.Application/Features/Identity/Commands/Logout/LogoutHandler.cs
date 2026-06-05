@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/Logout/LogoutHandler.cs
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;

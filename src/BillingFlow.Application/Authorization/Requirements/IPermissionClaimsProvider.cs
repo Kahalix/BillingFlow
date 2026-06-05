@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IPermissionClaimsProvider.cs
 using System.Security.Claims;
 
 using BillingFlow.Domain.Enums;

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Entities/ProvidedService.cs
 using System;
 
 using BillingFlow.Domain.Common;

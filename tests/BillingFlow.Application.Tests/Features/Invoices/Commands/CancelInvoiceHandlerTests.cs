@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.Application.Tests/Features/Invoices/Commands/CancelInvoiceHandlerTests.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;

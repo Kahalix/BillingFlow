@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/ReadModels/EventHandlers/UpdateClientBalanceOnInvoiceGenerated.cs
 using System.Threading;
 using System.Threading.Tasks;
 

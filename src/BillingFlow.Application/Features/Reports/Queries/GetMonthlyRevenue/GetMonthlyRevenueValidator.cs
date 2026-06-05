@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Reports/Queries/GetMonthlyRevenue/GetMonthlyRevenueValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Reports.Queries.GetMonthlyRevenue;

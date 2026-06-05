@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/BackgroundJobs/HangfireAuthorizationFilter.cs
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
 

@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Clients/Commands/UpdateClient/UpdateClientValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.Clients.Commands.UpdateClient;

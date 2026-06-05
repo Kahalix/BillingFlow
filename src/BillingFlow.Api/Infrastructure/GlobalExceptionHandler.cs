@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/Infrastructure/GlobalExceptionHandler.cs
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Domain.Exceptions;
 

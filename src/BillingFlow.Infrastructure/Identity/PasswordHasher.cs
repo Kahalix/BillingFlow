@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Identity/PasswordHasher.cs
 using BillingFlow.Application.Interfaces;
 
 namespace BillingFlow.Infrastructure.Identity;

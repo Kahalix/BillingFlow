@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/SuspendUser/SuspendUserHandler.cs
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
 

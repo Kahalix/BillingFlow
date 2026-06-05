@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Migrations/Schema/Seeds/202605020508_SeedProvidedServices.cs
 using System;
 
 using FluentMigrator;

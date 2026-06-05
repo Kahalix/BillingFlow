@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Stripe/StripeIntegrationService.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;

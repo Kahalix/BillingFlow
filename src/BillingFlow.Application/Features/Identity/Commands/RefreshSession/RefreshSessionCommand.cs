@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/RefreshSession/RefreshSessionCommand.cs
 using BillingFlow.Application.Authorization.Requirements;
 using BillingFlow.Application.Features.Identity.Commands.LoginUser;
 

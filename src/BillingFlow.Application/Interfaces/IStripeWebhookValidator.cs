@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IStripeWebhookValidator.cs
 using System;
 
 using BillingFlow.Domain.Enums;

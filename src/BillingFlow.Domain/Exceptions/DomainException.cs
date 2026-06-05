@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Exceptions/DomainException.cs
 namespace BillingFlow.Domain.Exceptions;
 
 /// <summary>

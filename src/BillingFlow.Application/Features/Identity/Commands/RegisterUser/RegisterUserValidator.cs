@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/RegisterUser/RegisterUserValidator.cs
 using BillingFlow.Application.Interfaces;
 
 using FluentValidation;

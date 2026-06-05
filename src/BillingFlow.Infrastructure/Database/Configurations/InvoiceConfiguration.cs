@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Database/Configurations/InvoiceConfiguration.cs
 using BillingFlow.Domain.Entities;
 
 using Microsoft.EntityFrameworkCore;

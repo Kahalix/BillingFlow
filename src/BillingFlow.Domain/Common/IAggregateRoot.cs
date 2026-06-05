@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Common/IAggregateRoot.cs
 namespace BillingFlow.Domain.Common;
 
 /// <summary>

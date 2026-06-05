@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Commands/GenerateInvoice/GenerateInvoiceRequest.cs
 using System;
 
 namespace BillingFlow.Application.Features.Invoices.Commands.GenerateInvoice;

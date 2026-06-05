@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.Domain.Tests/Entities/PaymentAttemptTests.cs
 using System;
 
 using BillingFlow.Domain.Entities;

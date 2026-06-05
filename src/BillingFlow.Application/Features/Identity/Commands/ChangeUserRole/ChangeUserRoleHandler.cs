@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Identity/Commands/ChangeUserRole/ChangeUserRoleHandler.cs
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
 

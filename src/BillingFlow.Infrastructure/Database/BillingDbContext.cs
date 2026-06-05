@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Database/BillingDbContext.cs
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;

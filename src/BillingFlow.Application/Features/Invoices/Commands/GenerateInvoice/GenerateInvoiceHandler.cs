@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/Invoices/Commands/GenerateInvoice/GenerateInvoiceHandler.cs
 using System;
 using System.Linq;
 using System.Threading;

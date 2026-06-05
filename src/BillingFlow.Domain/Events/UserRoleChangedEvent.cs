@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Events/UserRoleChangedEvent.cs
 using BillingFlow.Domain.Common;
 using BillingFlow.Domain.Enums;
 

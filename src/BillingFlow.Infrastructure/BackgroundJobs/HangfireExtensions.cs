@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/BackgroundJobs/HangfireExtensions.cs
 using Hangfire;
 
 using Microsoft.AspNetCore.Builder;

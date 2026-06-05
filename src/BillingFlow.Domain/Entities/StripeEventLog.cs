@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Domain/Entities/StripeEventLog.cs
 using System;
 
 using BillingFlow.Domain.Common;

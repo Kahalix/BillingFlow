@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/BackgroundJobs/HangfireService.cs
 using System.Linq.Expressions;
 
 using Hangfire;

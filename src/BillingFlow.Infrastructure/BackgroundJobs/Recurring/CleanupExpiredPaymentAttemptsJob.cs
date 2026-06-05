@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/BackgroundJobs/Recurring/CleanupExpiredPaymentAttemptsJob.cs
 using System;
 using System.Linq;
 using System.Threading;

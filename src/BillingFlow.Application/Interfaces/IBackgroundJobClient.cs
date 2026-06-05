@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Interfaces/IBackgroundJobClient.cs
 using System.Linq.Expressions;
 
 namespace BillingFlow.Application.Interfaces;

@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.IntegrationTests/Base/CustomWebApplicationFactory.cs
 using System;
 using System.Collections.Generic;
 using System.Data.Common;

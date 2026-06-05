@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Api/Extensions/AuthorizationExtensions.cs
 using System.Text;
 
 using BillingFlow.Application.Authorization;

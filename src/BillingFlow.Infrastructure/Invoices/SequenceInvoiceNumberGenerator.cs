@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Infrastructure/Invoices/SequenceInvoiceNumberGenerator.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;

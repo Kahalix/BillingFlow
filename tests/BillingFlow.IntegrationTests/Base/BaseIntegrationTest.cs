@@ -1,4 +1,3 @@
-// File: tests/BillingFlow.IntegrationTests/Base/BaseIntegrationTest.cs
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;

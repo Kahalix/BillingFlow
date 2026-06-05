@@ -1,4 +1,3 @@
-// File: src/BillingFlow.Application/Features/ProvidedServices/Commands/AddProvidedService/AddProvidedServiceValidator.cs
 using FluentValidation;
 
 namespace BillingFlow.Application.Features.ProvidedServices.Commands.AddProvidedService;
