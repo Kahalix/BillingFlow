@@ -16,6 +16,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPresentation(this IServiceCollection services)
     {
+        services.AddRouting(options =>
+        {
+            options.LowercaseUrls = true;
+        });
+
         services.AddControllers();
         services.AddEndpointsApiExplorer();
 

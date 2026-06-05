@@ -13,6 +13,9 @@ public interface IApplicationDbContext
     DbSet<Invoice> Invoices { get; }
     DbSet<InvoiceItem> InvoiceItems { get; }
     DbSet<ProvidedService> ProvidedServices { get; }
+    DbSet<PaymentAttempt> PaymentAttempts {  get; }
+    DbSet<Payment> Payments {  get; }
+    DbSet<StripeEventLog> StripeEventLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

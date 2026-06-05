@@ -8,6 +8,7 @@
     <PackageVersion Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageVersion Include="Dapper" Version="2.1.35" />
 	<PackageVersion Include="QuestPDF" Version="2026.5.0" />
+	<PackageVersion Include="Stripe.net" Version="51.2.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="8.0.1" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
@@ -26,18 +27,18 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="7.5.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
 	  
 	  
 	<PackageVersion Include="coverlet.collector" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageVersion Include="xunit" Version="2.5.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageVersion Include="xunit" Version="2.9.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="FluentAssertions" Version="6.12.0" />
+    <PackageVersion Include="FluentAssertions" Version="7.0.0" />
     <PackageVersion Include="MockQueryable.Moq" Version="8.0.0" />
-	<PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
+	<PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.26" />
 	<PackageVersion Include="Testcontainers.MsSql" Version="3.8.0" />
 	<PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
 	<PackageVersion Include="Respawn" Version="7.0.0" />

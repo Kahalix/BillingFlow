@@ -37,5 +37,7 @@ public static class AppPermissions
 
     // Payments
     public const string PaymentsRead = "payments.read";
+    public const string PaymentsCreate = "payments.create";
+    public const string PaymentsCreateManual = "payments.createManual";
     public const string PaymentsRefund = "payments.refund";
 }

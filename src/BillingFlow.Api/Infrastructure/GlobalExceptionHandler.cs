@@ -80,6 +80,28 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 problemDetails.Detail = domainEx.Message;
                 break;
 
+            case UniqueConstraintException:
+                // Standard HTTP status for duplicate resources
+                problemDetails.Title = "Resource Conflict";
+                problemDetails.Status = StatusCodes.Status409Conflict;
+                problemDetails.Detail = "The resource you are trying to create already exists or violates a uniqueness constraint.";
+                break;
+
+            case InvalidWebhookSignatureException:
+                // A bad signature is a client error / unauthorized attempt
+                problemDetails.Title = "Invalid Webhook Signature";
+                problemDetails.Status = StatusCodes.Status400BadRequest;
+                problemDetails.Detail = "The webhook signature could not be verified. Spoofing attempt blocked.";
+                break;
+
+            case ExternalServiceException externalEx:
+                problemDetails.Title = "External Service Failure";
+                problemDetails.Status = StatusCodes.Status502BadGateway;
+                problemDetails.Detail = "We are temporarily unable to communicate with the payment provider. Please try again later.";
+                // log internal details, but return safe message to client
+                logger.LogError(externalEx, "Integration failed: {Message}", externalEx.Message);
+                break;
+
             default:
                 problemDetails.Title = "Internal Server Error";
                 problemDetails.Status = StatusCodes.Status500InternalServerError;

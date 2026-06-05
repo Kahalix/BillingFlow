@@ -111,7 +111,6 @@ public class ClientsController(ISender sender) : ControllerBase
     {
         var response = await sender.Send(command, cancellationToken);
 
-        // REST Best Practice: Return structured JSON object with the location header
         return CreatedAtAction(nameof(GetClientDetails), new { id = response.ClientId }, response);
     }
 

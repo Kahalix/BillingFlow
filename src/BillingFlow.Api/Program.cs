@@ -55,6 +55,8 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
         : [new HangfireAuthorizationFilter()] // Production: Only Admins
 });
 
+app.InitializeHangfireJobs();
+
 app.MapControllers();
 
 app.Run();

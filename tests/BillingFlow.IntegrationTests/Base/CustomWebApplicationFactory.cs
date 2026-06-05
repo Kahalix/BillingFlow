@@ -44,11 +44,13 @@ public class TestAuthHandler(
 {
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        // Enterprise Rule: Explicit over Implicit. No default fallback to Admin.
         if (!Request.Headers.TryGetValue("Test-Role", out var roleHeader) ||
             !Request.Headers.TryGetValue("Test-UserId", out var userIdHeader))
         {
-            return Task.FromResult(AuthenticateResult.Fail("Explicit authorization headers are missing for this test."));
+            //return Task.FromResult(AuthenticateResult.Fail("Explicit authorization headers are missing for this test."));
+
+            // Fail() forcibly rejects the request with 401, which breaks [AllowAnonymous] endpoints like Webhooks.
+            return Task.FromResult(AuthenticateResult.NoResult());
         }
 
         var claims = new List<Claim>
@@ -144,6 +146,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         builder.UseSetting("JwtSettings:Issuer", "TestIssuer");
         builder.UseSetting("JwtSettings:Audience", "TestAudience");
 
+        builder.UseSetting("Stripe:WebhookSecret", "whsec_integration_test_secret_12345");
+
         builder.ConfigureTestServices(services =>
         {
             // 1. Inject the dynamic Mock Authentication Scheme
@@ -158,8 +162,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             // 3. Force EF Core to use the Testcontainer connection string explicitly
             var dbContextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<BillingDbContext>));
             if (dbContextDescriptor != null) services.Remove(dbContextDescriptor);
-            services.AddDbContext<BillingDbContext>(options =>
-                options.UseSqlServer(_dbContainer.GetConnectionString()));
+
+            services.AddDbContext<BillingDbContext>((sp, options) =>
+            {
+                options.UseSqlServer(_dbContainer.GetConnectionString());
+
+                // Without this, domain events will never dispatch in integration tests.
+                var interceptor = sp.GetService<BillingFlow.Infrastructure.Database.Interceptors.DispatchDomainEventsInterceptor>();
+                if (interceptor != null)
+                {
+                    options.AddInterceptors(interceptor);
+                }
+            });
 
         });
     }

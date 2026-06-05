@@ -160,4 +160,70 @@ public class TestEntityFactory
 
         return (user, client, invoice);
     }
+
+    /// <summary>
+    /// Creates a PaymentAttempt securely locked in the database in a specific status.
+    /// </summary>
+    public async Task<PaymentAttempt> CreatePaymentAttemptAsync(
+        Invoice invoice,
+        decimal amount,
+        PaymentProvider provider = PaymentProvider.Stripe,
+        PaymentStatus status = PaymentStatus.Initializing,
+        string? providerReference = null)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
+
+        var attempt = PaymentAttempt.Reserve(invoice.Id, amount, provider, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(24));
+
+        if (status != PaymentStatus.Initializing)
+        {
+            attempt.SetCheckoutDetails(
+                providerReference ?? $"cs_test_{Guid.NewGuid().ToString("N")[..8]}",
+                "https://checkout.stripe.com/pay");
+
+            if (status == PaymentStatus.Succeeded)
+                attempt.MarkAsSucceeded();
+            else if (status == PaymentStatus.Failed)
+                attempt.MarkAsFailed("Testing decline");
+            else if (status == PaymentStatus.Expired)
+                attempt.MarkAsExpired();
+        }
+
+        db.PaymentAttempts.Add(attempt);
+        await db.SaveChangesAsync();
+
+        return attempt;
+    }
+
+    /// <summary>
+    /// Creates a full accounting ledger Payment record.
+    /// </summary>
+    public async Task<Payment> CreateManualPaymentAsync(
+        Invoice invoice,
+        decimal amount,
+        Guid receivedByUserId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
+
+        // Domain rule: Must apply payment to invoice first to sync balances correctly
+        var trackedInvoice = await db.Invoices.FindAsync(invoice.Id);
+        trackedInvoice!.ApplyPayment(amount);
+
+        var payment = Payment.CreateManualPayment(
+            invoice.Id,
+            invoice.ClientId,
+            amount,
+            PaymentMethod.BankTransfer,
+            DateTimeOffset.UtcNow,
+            receivedByUserId,
+            "Integration Test Payment",
+            DateTimeOffset.UtcNow);
+
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        return payment;
+    }
 }

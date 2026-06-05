@@ -21,7 +21,7 @@ public class DownloadInvoicePdfPolicy(
         var userId = currentUserService.UserId;
 
         // Back-office employees bypass the ownership check
-        if (role is Role.Admin or Role.Manager or Role.Accountant)
+        if (role is Role.Admin or Role.Manager or Role.Accountant or Role.Employee)
             return true;
 
         var invoice = await context.Invoices.AsNoTracking()

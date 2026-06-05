@@ -27,7 +27,8 @@ public static class RolePermissions
 
         AppPermissions.ReportsRead,
 
-        AppPermissions.PaymentsRead, AppPermissions.PaymentsRefund
+        AppPermissions.PaymentsRead, AppPermissions.PaymentsCreate,
+        AppPermissions.PaymentsCreateManual, AppPermissions.PaymentsRefund
     ];
 
     private static readonly IReadOnlyList<string> ManagerPermissions =
@@ -46,7 +47,10 @@ public static class RolePermissions
 
         AppPermissions.ProvidedServicesCreate,
 
-        AppPermissions.ReportsRead
+        AppPermissions.ReportsRead,
+
+        AppPermissions.PaymentsRead, AppPermissions.PaymentsCreate,
+        AppPermissions.PaymentsCreateManual, AppPermissions.PaymentsRefund
 
     ];
 
@@ -57,7 +61,8 @@ public static class RolePermissions
 
         AppPermissions.ReportsRead,
 
-        AppPermissions.PaymentsRead, AppPermissions.PaymentsRefund
+        AppPermissions.PaymentsRead, AppPermissions.PaymentsCreate,
+        AppPermissions.PaymentsCreateManual, AppPermissions.PaymentsRefund
     ];
 
     private static readonly IReadOnlyList<string> EmployeePermissions =
@@ -68,7 +73,9 @@ public static class RolePermissions
 
         AppPermissions.ProvidedServicesCreate,
 
-        AppPermissions.InvoicesRead
+        AppPermissions.InvoicesRead,
+
+        AppPermissions.PaymentsRead, AppPermissions.PaymentsCreateManual
     ];
 
     private static readonly IReadOnlyList<string> CustomerPermissions =
@@ -77,7 +84,8 @@ public static class RolePermissions
         // Data ownership (e.g., "can I read THIS specific invoice") must be validated by IAuthorizationPolicy.
         AppPermissions.InvoicesRead,
 
-        AppPermissions.PaymentsRead
+        AppPermissions.PaymentsRead,
+        AppPermissions.PaymentsCreate
     ];
 
     /// <summary>
