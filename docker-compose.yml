@@ -1,5 +1,3 @@
-# File: docker-compose.yml
-
 services:
   # --- 1. RELATIONAL DATABASE (SQL SERVER 2022) ---
   sqldb:

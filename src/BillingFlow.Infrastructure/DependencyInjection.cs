@@ -31,16 +31,18 @@ public static class DependencyInjection
 
         // Register the interceptor so its dependencies (IPublisher) are resolved by DI
         services.AddScoped<DispatchDomainEventsInterceptor>();
-        // services.AddScoped<AuditInterceptor>(); // To be added later
+        services.AddScoped<AuditInterceptor>();
 
         services.AddDbContext<BillingDbContext>((sp, options) =>
         {
             var domainEventsInterceptor = sp.GetRequiredService<DispatchDomainEventsInterceptor>();
-            // var auditInterceptor = sp.GetRequiredService<AuditInterceptor>();
+            var auditInterceptor = sp.GetRequiredService<AuditInterceptor>();
 
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-                   .AddInterceptors(domainEventsInterceptor);
-            // .AddInterceptors(auditInterceptor, domainEventsInterceptor);
+                   // ORDER IS CRITICAL: 
+                   // 1. Dispatch domain events (which might trigger MediatR handlers that mutate DbContext further).
+                   // 2. Audit the FINAL state of the ChangeTracker.
+                   .AddInterceptors(auditInterceptor, domainEventsInterceptor);
         });
 
         // Interface mapping for architecture boundary compliance
@@ -52,6 +54,7 @@ public static class DependencyInjection
         // 2. Identity Services
         services.AddHttpContextAccessor(); // Required to read claims from HTTP request
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IAuditContext, AuditContext>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenGenerator, TokenGenerator>();
         services.AddSingleton<ITokenHashService, TokenHashService>();

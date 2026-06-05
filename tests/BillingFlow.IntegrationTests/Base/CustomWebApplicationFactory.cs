@@ -166,12 +166,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             {
                 options.UseSqlServer(_dbContainer.GetConnectionString());
 
-                // Without this, domain events will never dispatch in integration tests.
-                var interceptor = sp.GetService<BillingFlow.Infrastructure.Database.Interceptors.DispatchDomainEventsInterceptor>();
-                if (interceptor != null)
-                {
-                    options.AddInterceptors(interceptor);
-                }
+                // Use GetRequiredService to fail fast if interceptors are missing
+                // Order is critical: 1. Process business logic (Events), 2. Record final state (Audit)
+                var domainEventsInterceptor = sp.GetRequiredService<BillingFlow.Infrastructure.Database.Interceptors.DispatchDomainEventsInterceptor>();
+                var auditInterceptor = sp.GetRequiredService<BillingFlow.Infrastructure.Database.Interceptors.AuditInterceptor>();
+
+                options.AddInterceptors(domainEventsInterceptor, auditInterceptor);
             });
 
         });

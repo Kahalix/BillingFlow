@@ -1,5 +1,3 @@
-# File: src/BillingFlow.Api/Dockerfile
-
 # --- STAGE 1: Base Runtime (Lightweight image for running the app) ---
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 USER app

@@ -20,7 +20,7 @@ public class BillingDbContext(DbContextOptions<BillingDbContext> options)
     public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<StripeEventLog> StripeEventLogs => Set<StripeEventLog>();
-
+    public DbSet<BillingFlow.Infrastructure.Auditing.AuditLog> AuditLogs => Set<BillingFlow.Infrastructure.Auditing.AuditLog>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

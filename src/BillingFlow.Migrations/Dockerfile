@@ -1,5 +1,3 @@
-# File: src/BillingFlow.Migrations/Dockerfile
-
 # --- STAGE 1: Base Runtime (Console App) ---
 FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
 USER app
