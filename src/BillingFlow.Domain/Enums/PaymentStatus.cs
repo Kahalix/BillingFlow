@@ -6,7 +6,9 @@ namespace BillingFlow.Domain.Enums;
 /// </summary>
 public enum PaymentStatus
 {
-    Started = 1,
-    Succeeded = 2,
-    Failed = 3
+    Initializing = 1, // Phase 1: DB Reservation made, waiting for Gateway URL
+    Started = 2,      // Phase 2: Gateway URL acquired, user is paying
+    Succeeded = 3,
+    Failed = 4,
+    Expired = 5
 }

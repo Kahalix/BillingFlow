@@ -75,4 +75,43 @@ public static class DomainTestFactory
         typeof(InvoiceItem).GetProperty("LineTotal")!.SetValue(item, 2000m);
         return item;
     }
+
+    /// <summary>
+    /// Creates a PaymentAttempt in the 'Started' state (Phase 2), simulating a successful Stripe API initialization.
+    /// </summary>
+    public static PaymentAttempt CreateStartedPaymentAttempt(
+        Guid invoiceId,
+        decimal amount,
+        string providerReference = "cs_test_123",
+        Guid? id = null)
+    {
+        // 1. Phase 1: Reservation
+        var attempt = PaymentAttempt.Reserve(
+            invoiceId, amount, PaymentProvider.Stripe, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(1));
+
+        // 2. Phase 2: Started
+        attempt.SetCheckoutDetails(providerReference, $"https://checkout.stripe.com/pay/{providerReference}");
+
+        SetPrivateId(attempt, id ?? Guid.NewGuid());
+        return attempt;
+    }
+
+    /// <summary>
+    /// Creates an offline manual payment ledger record.
+    /// </summary>
+    public static Payment CreateManualPayment(Guid invoiceId, decimal amount, Guid? id = null, Guid? clientId = null)
+    {
+        var payment = Payment.CreateManualPayment(
+            invoiceId,
+            clientId ?? Guid.NewGuid(),
+            amount,
+            PaymentMethod.BankTransfer,
+            DateTimeOffset.UtcNow,
+            Guid.NewGuid(),
+            "Test payment",
+            DateTimeOffset.UtcNow);
+
+        SetPrivateId(payment, id ?? Guid.NewGuid());
+        return payment;
+    }
 }

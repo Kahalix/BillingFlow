@@ -13,6 +13,8 @@ using BillingFlow.Application.Features.Identity.Commands.SuspendUser;
 using BillingFlow.Application.Features.Invoices.Common;
 using BillingFlow.Application.Features.Invoices.Queries.DownloadInvoicePdf;
 using BillingFlow.Application.Features.Invoices.Queries.GetInvoiceDetails;
+using BillingFlow.Application.Features.Payments.Commands.CreatePaymentSession;
+using BillingFlow.Application.Features.Payments.Queries.GetPaymentDetails;
 
 using FluentValidation;
 
@@ -65,6 +67,10 @@ public static class DependencyInjection
         // Invoices
         services.AddScoped<IAuthorizationPolicy<GetInvoiceDetailsQuery>, GetInvoiceDetailsPolicy>();
         services.AddScoped<IAuthorizationPolicy<DownloadInvoicePdfQuery>, DownloadInvoicePdfPolicy>();
+        
+        // Payments
+        services.AddScoped<IAuthorizationPolicy<GetPaymentDetailsQuery>, GetPaymentDetailsPolicy>();
+        services.AddScoped<IAuthorizationPolicy<CreatePaymentSessionCommand>, CreatePaymentSessionPolicy>();
 
 
         // 4. Register Shared Feature Services & Data Providers

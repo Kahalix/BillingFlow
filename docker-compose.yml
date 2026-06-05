@@ -113,6 +113,22 @@ services:
         max-size: "50m"
         max-file: "5"
 
+  # --- 5. STRIPE CLI (Local Webhook Forwarding) ---
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    container_name: billingflow_stripe_cli
+    restart: unless-stopped
+    command: "listen --api-key ${STRIPE_SECRET_KEY} --forward-to http://api:8080/api/webhooks/stripe --latest"
+    networks:
+      - billing_network
+    depends_on:
+      api:
+        condition: service_started
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
 volumes:
   sqldb_data:
   redis_data:

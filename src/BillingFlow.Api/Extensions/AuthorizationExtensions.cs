@@ -114,6 +114,8 @@ public static class AuthorizationExtensions
 
             // Payments
             .AddPolicy(AppPermissions.PaymentsRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.PaymentsRead)))
+            .AddPolicy(AppPermissions.PaymentsCreate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.PaymentsCreate)))
+            .AddPolicy(AppPermissions.PaymentsCreateManual, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.PaymentsCreateManual)))
             .AddPolicy(AppPermissions.PaymentsRefund, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.PaymentsRefund)));
 
         // 3. Register the custom permission handler

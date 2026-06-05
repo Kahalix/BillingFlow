@@ -7,9 +7,13 @@ using BillingFlow.Infrastructure.Database.Interceptors;
 using BillingFlow.Infrastructure.Identity;
 using BillingFlow.Infrastructure.Invoices;
 using BillingFlow.Infrastructure.Projections;
+using BillingFlow.Infrastructure.Stripe;
 
 using Hangfire;
 using Hangfire.SqlServer;
+
+using Stripe;
+using Stripe.Checkout;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -75,10 +79,21 @@ public static class DependencyInjection
         }
         else
         {
-            // services.AddTransient<IEmailSender, SmtpEmailSender>();
+            //services.AddTransient<IEmailSender, SmtpEmailSender>();
         }
 
-        // services.AddScoped<IStripeService, StripeIntegrationService>();
+        // Stripe
+
+        // Ustawienie global key
+        StripeConfiguration.ApiKey = configuration["Stripe:SecretKey"];
+
+
+        // 1. Register Stripe SessionService
+        services.AddTransient<SessionService>();
+
+        // 2. Register our custom StripeService
+        services.AddScoped<IStripeService, StripeIntegrationService>();
+        services.AddScoped<IStripeWebhookValidator, StripeWebhookValidator>();
 
         // --- Hangfire Configuration ---
         var connectionString = configuration.GetConnectionString("DefaultConnection")

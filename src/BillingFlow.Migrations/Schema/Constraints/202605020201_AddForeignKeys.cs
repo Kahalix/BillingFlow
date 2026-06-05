@@ -53,11 +53,41 @@ public class AddForeignKeys : Migration
             .FromTable("ClientBalances").ForeignColumn("ClientId")
             .ToTable("Clients").PrimaryColumn("Id")
             .OnDelete(System.Data.Rule.Cascade);
+
+        // 8. PaymentAttempts -> Invoices
+        Create.ForeignKey("FK_PaymentAttempts_Invoices_InvoiceId")
+            .FromTable("PaymentAttempts").ForeignColumn("InvoiceId")
+            .ToTable("Invoices").PrimaryColumn("Id")
+            .OnDelete(System.Data.Rule.None);
+
+        // 9. Payments -> Invoices
+        Create.ForeignKey("FK_Payments_Invoices_InvoiceId")
+            .FromTable("Payments").ForeignColumn("InvoiceId")
+            .ToTable("Invoices").PrimaryColumn("Id")
+            .OnDelete(System.Data.Rule.None);
+
+        // 10. Payments -> PaymentAttempts
+        Create.ForeignKey("FK_Payments_PaymentAttempts_PaymentAttemptId")
+            .FromTable("Payments").ForeignColumn("PaymentAttemptId")
+            .ToTable("PaymentAttempts").PrimaryColumn("Id")
+            .OnDelete(System.Data.Rule.None);
+
+        // 11. Payments -> Users (ReceivedByUserId for manual back-office payments)
+        // If an employee is deleted, we just set it to NULL, the payment record itself MUST stay.
+        Create.ForeignKey("FK_Payments_Users_ReceivedByUserId")
+            .FromTable("Payments").ForeignColumn("ReceivedByUserId")
+            .ToTable("Users").PrimaryColumn("Id")
+            .OnDelete(System.Data.Rule.SetNull);
     }
 
     public override void Down()
     {
         // Explicitly drop constraints in reverse order
+        Delete.ForeignKey("FK_Payments_Users_ReceivedByUserId").OnTable("Payments");
+        Delete.ForeignKey("FK_Payments_PaymentAttempts_PaymentAttemptId").OnTable("Payments");
+        Delete.ForeignKey("FK_Payments_Invoices_InvoiceId").OnTable("Payments");
+        Delete.ForeignKey("FK_PaymentAttempts_Invoices_InvoiceId").OnTable("PaymentAttempts");
+
         Delete.ForeignKey("FK_ClientBalances_Clients_ClientId").OnTable("ClientBalances");
         Delete.ForeignKey("FK_ProvidedServices_Invoices_InvoiceId").OnTable("ProvidedServices");
         Delete.ForeignKey("FK_ProvidedServices_Clients_ClientId").OnTable("ProvidedServices");
