@@ -32,7 +32,10 @@ public static class AppPermissions
     public const string ReportsRead = "reports.read";
 
     // ProvidedServices
+    public const string ProvidedServicesRead = "services.read";
     public const string ProvidedServicesCreate = "services.create";
+    public const string ProvidedServicesUpdate = "services.update";
+    public const string ProvidedServicesDelete = "services.delete";
 
     // Payments
     public const string PaymentsRead = "payments.read";

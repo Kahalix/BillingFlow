@@ -29,7 +29,7 @@ public class InvoicesController(ISender sender) : ControllerBase
     /// Access is protected by ABAC: Customers can only view their own invoices.
     /// </summary>
     [HttpGet("{id:guid}")]
-    [Authorize] // We only require authentication; the specific ABAC Policy handles the rest via MediatR Pipeline
+    [Authorize(Policy = AppPermissions.InvoicesRead)]
     [ProducesResponseType(typeof(InvoiceDetailsModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -107,7 +107,7 @@ public class InvoicesController(ISender sender) : ControllerBase
     /// Access is protected by ABAC: Customers can only download their own invoices.
     /// </summary>
     [HttpGet("{id:guid}/pdf")]
-    [Authorize] // ABAC Policy handled inside MediatR
+    [Authorize(Policy = AppPermissions.InvoicesRead)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -118,7 +118,6 @@ public class InvoicesController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(new DownloadInvoicePdfQuery(id), cancellationToken);
 
-        // Zwraca natywny plik .pdf z nagłówkami "application/pdf" oraz "Content-Disposition"
         return File(result.Content, "application/pdf", result.FileName);
     }
 }

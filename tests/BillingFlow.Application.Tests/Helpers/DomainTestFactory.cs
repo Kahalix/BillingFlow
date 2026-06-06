@@ -113,4 +113,32 @@ public static class DomainTestFactory
         SetPrivateId(payment, id ?? Guid.NewGuid());
         return payment;
     }
+
+    public static ProvidedService CreateUnbilledProvidedService(
+        Guid? clientId = null,
+        decimal amount = 100m,
+        Guid? id = null)
+    {
+        var service = ProvidedService.Create(
+            clientId ?? Guid.NewGuid(),
+            "Mocked Service",
+            amount,
+            DateTimeOffset.UtcNow.AddDays(-1),
+            DateTimeOffset.UtcNow);
+
+        SetPrivateId(service, id ?? Guid.NewGuid());
+        return service;
+    }
+
+    public static ProvidedService CreateBilledProvidedService(
+        Guid? clientId = null,
+        Guid? invoiceId = null,
+        Guid? id = null)
+    {
+        var service = CreateUnbilledProvidedService(clientId, 100m, id);
+
+        // Legal DDD path to transition the state machine to Billed
+        service.MarkAsBilled(invoiceId ?? Guid.NewGuid(), DateTimeOffset.UtcNow);
+        return service;
+    }
 }

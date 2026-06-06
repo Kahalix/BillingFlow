@@ -19,11 +19,9 @@ public class CreateClientsTable : Migration
             .WithColumn("Status").AsInt32().NotNullable()
             .WithColumn("RowVersion").AsCustom("rowversion").NotNullable();
 
-        // Unique verification index per corporate profile bound to a single user identity
-        Create.Index("IX_Clients_UserId")
-            .OnTable("Clients")
-            .OnColumn("UserId").Ascending()
-            .WithOptions().Unique();
+        // Create a filtered unique index using raw SQL Server syntax.
+        // This ensures UserId uniqueness only when it is NOT NULL, allowing multiple clients to exist without a user.
+        Execute.Sql("CREATE UNIQUE NONCLUSTERED INDEX [IX_Clients_UserId] ON [dbo].[Clients] ([UserId] ASC) WHERE [UserId] IS NOT NULL;");
 
         // Enforce absolute database protection against duplicates using TaxId
         Create.Index("IX_Clients_TaxId")

@@ -106,10 +106,12 @@ public static class AuthorizationExtensions
             .AddPolicy(AppPermissions.InvoicesRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.InvoicesRead)))
             .AddPolicy(AppPermissions.InvoicesGenerate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.InvoicesGenerate)))
             .AddPolicy(AppPermissions.InvoicesCancel, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.InvoicesCancel)))
-
             
             // ProvidedServices
+            .AddPolicy(AppPermissions.ProvidedServicesRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ProvidedServicesRead)))
             .AddPolicy(AppPermissions.ProvidedServicesCreate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ProvidedServicesCreate)))
+            .AddPolicy(AppPermissions.ProvidedServicesUpdate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ProvidedServicesUpdate)))
+            .AddPolicy(AppPermissions.ProvidedServicesDelete, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ProvidedServicesDelete)))
 
             // Payments
             .AddPolicy(AppPermissions.PaymentsRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.PaymentsRead)))

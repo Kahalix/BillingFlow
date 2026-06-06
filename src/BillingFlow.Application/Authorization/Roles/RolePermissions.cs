@@ -22,7 +22,8 @@ public static class RolePermissions
 
         AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate,
 
-        AppPermissions.ProvidedServicesCreate,
+        AppPermissions.ProvidedServicesRead, AppPermissions.ProvidedServicesCreate,
+        AppPermissions.ProvidedServicesUpdate, AppPermissions.ProvidedServicesDelete,
 
         AppPermissions.ReportsRead,
 
@@ -44,7 +45,8 @@ public static class RolePermissions
         AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate,
         AppPermissions.InvoicesCancel,
 
-        AppPermissions.ProvidedServicesCreate,
+        AppPermissions.ProvidedServicesRead, AppPermissions.ProvidedServicesCreate,
+        AppPermissions.ProvidedServicesUpdate, AppPermissions.ProvidedServicesDelete,
 
         AppPermissions.ReportsRead,
 
@@ -55,6 +57,8 @@ public static class RolePermissions
 
     private static readonly IReadOnlyList<string> AccountantPermissions =
     [
+        AppPermissions.ProvidedServicesRead,
+
         AppPermissions.InvoicesRead, AppPermissions.InvoicesGenerate,
         AppPermissions.InvoicesCancel,
 
@@ -70,7 +74,8 @@ public static class RolePermissions
 
         AppPermissions.ClientsRead, AppPermissions.ClientsUpdate,
 
-        AppPermissions.ProvidedServicesCreate,
+        AppPermissions.ProvidedServicesRead, AppPermissions.ProvidedServicesCreate,
+        AppPermissions.ProvidedServicesUpdate, AppPermissions.ProvidedServicesDelete,
 
         AppPermissions.InvoicesRead,
 
@@ -81,6 +86,9 @@ public static class RolePermissions
     [
         // Static permissions act as "module entry pass". 
         // Data ownership (e.g., "can I read THIS specific invoice") must be validated by IAuthorizationPolicy.
+
+        AppPermissions.ProvidedServicesRead,
+
         AppPermissions.InvoicesRead,
 
         AppPermissions.PaymentsRead,

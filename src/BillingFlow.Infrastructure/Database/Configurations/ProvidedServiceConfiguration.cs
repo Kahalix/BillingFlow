@@ -20,9 +20,14 @@ public class ProvidedServiceConfiguration : IEntityTypeConfiguration<ProvidedSer
             .HasColumnType("decimal(18,2)")
             .IsRequired();
 
+        builder.Property(ps => ps.Status)
+            .IsRequired();
+
         builder.HasIndex(ps => ps.ClientId);
 
-        // Critical for fast lookups of uninvoiced services
         builder.HasIndex(ps => ps.InvoiceId);
+
+        // Optimizes lookups for services in a specific state
+        builder.HasIndex(ps => ps.Status);
     }
 }

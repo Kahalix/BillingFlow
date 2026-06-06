@@ -281,8 +281,11 @@ public class ClientsController(ISender sender) : ControllerBase
 
         var serviceId = await sender.Send(command, cancellationToken);
 
-        // Zwracamy po prostu ID (lub w przyszłości Location Header TODO CreatedAtAction)
-        return Created(string.Empty, new { Id = serviceId });
+        // CreatedAtRoute mapping to the named route in ProvidedServicesController
+        return CreatedAtRoute(
+            routeName: "GetProvidedServiceDetails",
+            routeValues: new { id = serviceId },
+            value: new { Id = serviceId });
     }
 
 }

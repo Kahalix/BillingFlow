@@ -1,14 +1,18 @@
+using AuditLog = BillingFlow.Infrastructure.Auditing.AuditLog;
+
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 
 using Microsoft.Data.SqlClient;
-
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BillingFlow.Infrastructure.Database;
 
-public class BillingDbContext(DbContextOptions<BillingDbContext> options)
+public class BillingDbContext(
+    DbContextOptions<BillingDbContext> options,
+    ILogger<BillingDbContext> logger)
     : DbContext(options), IApplicationDbContext
 {
     public DbSet<AppUser> Users => Set<AppUser>();
@@ -20,13 +24,13 @@ public class BillingDbContext(DbContextOptions<BillingDbContext> options)
     public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<StripeEventLog> StripeEventLogs => Set<StripeEventLog>();
-    public DbSet<BillingFlow.Infrastructure.Auditing.AuditLog> AuditLogs => Set<BillingFlow.Infrastructure.Auditing.AuditLog>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // This will automatically apply all configurations (like UserTokenConfiguration)
-        // that implement IEntityTypeConfiguration<T> in this assembly.
+        // Automatically apply all configuration mappings defined within this assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BillingDbContext).Assembly);
     }
 
@@ -38,12 +42,28 @@ public class BillingDbContext(DbContextOptions<BillingDbContext> options)
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
-            // Extract the failing entity type directly from EF Core tracking.
-            // This completely avoids parsing localized SQL Server error strings.
-            var entityName = ex.Entries.FirstOrDefault()?.Metadata.ClrType.Name;
+            // Extract unique entities involved in the transaction, ignoring infrastructure audit records
+            var entityNames = ex.Entries
+                .Select(e => e.Metadata.ClrType.Name)
+                .Where(name => name != nameof(AuditLog))
+                .Distinct()
+                .ToList();
 
+            // Default to a neutral fallback if multi-entity conflicts occur to prevent structural information leakage
+            var entityName = entityNames.Count == 1 ? entityNames[0] : "Unknown";
+
+            // Extract native relational database error details for internal log context
+            var sqlErrorMessage = ex.InnerException is SqlException sqlEx ? sqlEx.Message : "Unknown SQL details.";
+
+            // Log full technical details securely on the server-side for troubleshooting
+            logger.LogWarning(ex,
+                "A database unique constraint violation occurred during SaveChangesAsync. Involved entities: {EntityNames}. SQL Details: {SqlErrorMessage}",
+                string.Join(", ", entityNames),
+                sqlErrorMessage);
+
+            // Throw a sanitized application exception clear of low-level database infrastructure context
             throw new UniqueConstraintException(
-                $"A database unique constraint was violated on entity: {entityName ?? "Unknown"}",
+                "The resource you are trying to create or update already exists or violates a uniqueness constraint.",
                 entityName,
                 ex);
         }

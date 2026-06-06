@@ -14,13 +14,17 @@ public class CreateProvidedServicesTable : Migration
             .WithColumn("Amount").AsDecimal(18, 2).NotNullable()
             .WithColumn("PerformedAt").AsDateTimeOffset().NotNullable()
             .WithColumn("InvoiceId").AsGuid().Nullable()
-            .WithColumn("BilledAt").AsDateTimeOffset().Nullable();
+            .WithColumn("BilledAt").AsDateTimeOffset().Nullable()
+            .WithColumn("Status").AsInt32().NotNullable();
 
         Create.Index("IX_ProvidedServices_ClientId")
             .OnTable("ProvidedServices").OnColumn("ClientId").Ascending();
 
         Create.Index("IX_ProvidedServices_InvoiceId")
             .OnTable("ProvidedServices").OnColumn("InvoiceId").Ascending();
+
+        Create.Index("IX_ProvidedServices_Status")
+            .OnTable("ProvidedServices").OnColumn("Status").Ascending();
     }
 
     public override void Down()

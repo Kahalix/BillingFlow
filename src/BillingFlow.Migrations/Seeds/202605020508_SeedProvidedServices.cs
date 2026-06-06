@@ -1,5 +1,7 @@
 using System;
 
+using BillingFlow.Domain.Enums;
+
 using FluentMigrator;
 
 namespace BillingFlow.Migrations.Schema.Seeds;
@@ -7,7 +9,6 @@ namespace BillingFlow.Migrations.Schema.Seeds;
 [Migration(202605020508)]
 public class SeedProvidedServices : Migration
 {
-    // Deterministic GUIDs for the Services
     private static readonly Guid Service1Id = Guid.Parse("00000000-0000-0000-0000-000000000301");
     private static readonly Guid Service2Id = Guid.Parse("00000000-0000-0000-0000-000000000302");
 
@@ -23,28 +24,30 @@ public class SeedProvidedServices : Migration
             -- Service 1: IT Consulting (Not billed yet, ready to be grouped into an invoice)
             IF NOT EXISTS (SELECT 1 FROM ProvidedServices WHERE Id = '{Service1Id}')
             BEGIN
-                INSERT INTO ProvidedServices (Id, ClientId, InvoiceId, Description, Amount, PerformedAt)
+                INSERT INTO ProvidedServices (Id, ClientId, InvoiceId, Description, Amount, PerformedAt, Status)
                 VALUES (
                     '{Service1Id}', 
                     '{Client1Id}', 
                     NULL, 
                     'Enterprise Cloud Migration Strategy Consulting', 
                     1500.00, 
-                    '{lastWeek:O}'
+                    '{lastWeek:O}',
+                    {(int)ProvidedServiceStatus.Unbilled}
                 );
             END
 
             -- Service 2: Server Maintenance
             IF NOT EXISTS (SELECT 1 FROM ProvidedServices WHERE Id = '{Service2Id}')
             BEGIN
-                INSERT INTO ProvidedServices (Id, ClientId, InvoiceId, Description, Amount, PerformedAt)
+                INSERT INTO ProvidedServices (Id, ClientId, InvoiceId, Description, Amount, PerformedAt, Status)
                 VALUES (
                     '{Service2Id}', 
                     '{Client1Id}', 
                     NULL, 
                     'Monthly AWS Server Maintenance and Security Patching', 
                     450.50, 
-                    '{lastWeek.AddDays(1):O}' 
+                    '{lastWeek.AddDays(1):O}',
+                    {(int)ProvidedServiceStatus.Unbilled}
                 );
             END
         ");
