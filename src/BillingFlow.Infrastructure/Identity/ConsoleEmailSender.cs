@@ -53,4 +53,15 @@ public class ConsoleEmailSender(ILogger<ConsoleEmailSender> logger) : IEmailSend
 
         return Task.CompletedTask;
     }
+
+    public Task SendInvoiceOverdueNoticeAsync(string toEmail, string companyName, string invoiceNumber, decimal amountDue, CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("========== MOCK EMAIL SENDER ==========");
+        logger.LogInformation("To: {Email}", toEmail);
+        logger.LogInformation("Subject: URGENT: Overdue Invoice {InvoiceNumber}", invoiceNumber);
+        logger.LogInformation("Body: Dear Customer ({CompanyName}), your invoice {InvoiceNumber} is now overdue. Please remit the outstanding balance of {AmountDue:C} immediately to avoid service interruption.", companyName, invoiceNumber, amountDue);
+        logger.LogInformation("=======================================");
+
+        return Task.CompletedTask;
+    }
 }

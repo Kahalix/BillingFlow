@@ -23,6 +23,42 @@ public static class DomainTestFactory
         }
     }
 
+    public static AppUser CreateActiveUser(string email = "test@domain.com", Role role = Role.Customer, Guid? id = null)
+    {
+        var user = new AppUser(email, "mocked_hash", role, DateTimeOffset.UtcNow);
+        SetPrivateId(user, id ?? Guid.NewGuid());
+        return user;
+    }
+
+    /// <summary>
+    /// Creates a mock UserToken. 
+    /// Optionally marks it as consumed to simulate Replay Attack scenarios.
+    /// </summary>
+    public static UserToken CreateUserToken(
+        Guid userId,
+        Guid? sessionId = null,
+        UserTokenType type = UserTokenType.RefreshToken,
+        bool isConsumed = false,
+        string hash = "mocked_token_hash",
+        Guid? id = null)
+    {
+        var token = new UserToken(
+            userId,
+            sessionId ?? Guid.NewGuid(),
+            type,
+            hash,
+            DateTimeOffset.UtcNow.AddDays(7), // Default active expiry
+            DateTimeOffset.UtcNow,
+            null);
+
+        if (isConsumed)
+        {
+            token.MarkAsConsumed(TimeProvider.System);
+        }
+
+        SetPrivateId(token, id ?? Guid.NewGuid());
+        return token;
+    }
     public static Client CreateActiveClient(Guid? id = null)
     {
         var client = Client.Create(Guid.NewGuid(), "Test Corp", "TAX-000", new Address("St", "City", "Zip", "USA"));

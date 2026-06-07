@@ -7,6 +7,7 @@ using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 
 using BillingFlow.Application.Authorization;
+using BillingFlow.Application.Interfaces;
 using BillingFlow.Infrastructure.Database;
 using BillingFlow.Migrations.Programmability.Procedures;
 
@@ -118,7 +119,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         {
             DbAdapter = DbAdapter.SqlServer,
             SchemasToInclude = ["dbo"],
-            // CRITICAL: Do not wipe the FluentMigrator history table!
+            // CRITICAL: Do not wipe the FluentMigrator history table
             TablesToIgnore = ["VersionInfo"]
         });
     }
@@ -141,6 +142,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         // Safely override configuration using UseSetting to prevent environment variable leakage
         builder.UseSetting("ConnectionStrings:DefaultConnection", _dbContainer.GetConnectionString());
+        builder.UseSetting("ConnectionStrings:Redis", "localhost:6379,abortConnect=false,connectTimeout=10");
         builder.UseSetting("JwtSettings:Secret", "SuperSecretTestKeyThatIsAtLeast32BytesLong!!!");
         builder.UseSetting("JwtSettings:Issuer", "TestIssuer");
         builder.UseSetting("JwtSettings:Audience", "TestAudience");
@@ -173,6 +175,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
                 options.AddInterceptors(domainEventsInterceptor, auditInterceptor);
             });
+
+            // 4. Mock the SignalR Notification Service
+            // We decouple the integration tests from the physical WebSocket delivery mechanism.
+            var notificationDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IClientNotificationService));
+            if (notificationDescriptor != null) services.Remove(notificationDescriptor);
+
+            var mockNotificationService = new Mock<IClientNotificationService>();
+            mockNotificationService
+                .Setup(x => x.NotifyPaymentRecordedAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<decimal>()))
+                .Returns(Task.CompletedTask);
+
+            services.AddSingleton(mockNotificationService.Object);
 
         });
     }

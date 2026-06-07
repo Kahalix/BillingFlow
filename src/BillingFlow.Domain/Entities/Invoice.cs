@@ -106,8 +106,8 @@ public class Invoice : Entity, IAggregateRoot
         if (Status == InvoiceStatus.Paid)
             throw new DomainException("This invoice is already fully paid.");
 
-        if (Status == InvoiceStatus.Draft)
-            throw new DomainException("Cannot apply payments to a Draft invoice. Issue it first.");
+        if (Status == InvoiceStatus.Draft || Status == InvoiceStatus.Canceled)
+            throw new DomainException("Cannot apply payments to Draft or Canceled invoices.");
 
         var remainingBalance = TotalAmount - PaidAmount;
         if (amount > remainingBalance)
@@ -148,6 +148,28 @@ public class Invoice : Entity, IAggregateRoot
         {
             AddDomainEvent(new InvoiceCanceledEvent(Id, ClientId, TotalAmount));
         }
+    }
+
+    /// <summary>
+    /// Flags the invoice as overdue if the deadline has passed and it is not fully paid.
+    /// This is an idempotent, auditable domain action that emits an event for external integrations.
+    /// </summary>
+    public void MarkAsOverdue(DateTimeOffset now)
+    {
+        if (Status is InvoiceStatus.Paid or InvoiceStatus.Canceled or InvoiceStatus.Draft)
+            return; // Ignore invalid transitions.
+
+        if (Status == InvoiceStatus.Overdue)
+            return; // Idempotent: already overdue.
+
+        if (now <= DueDate)
+            throw new DomainException("Cannot mark as overdue. The due date has not yet passed.");
+
+        Status = InvoiceStatus.Overdue;
+
+        var amountDue = TotalAmount - PaidAmount;
+
+        AddDomainEvent(new InvoiceOverdueEvent(Id, ClientId, amountDue));
     }
 
     private void RecalculateTotal()

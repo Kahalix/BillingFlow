@@ -7,4 +7,4 @@ using MediatR;
 public record RegisterUserCommand(
     string Email,
     string Password,
-    Role TargetRole) : IRequest<Guid>, IAuthenticatedRequest, IRequirePermission, IRequirePolicy;
+    Role TargetRole) : IRequest<Guid>, IRequirePermission, IRequirePolicy;

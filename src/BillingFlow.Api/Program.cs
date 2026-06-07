@@ -1,7 +1,9 @@
 using BillingFlow.Api.Extensions;
+using BillingFlow.Api.Hubs;
 using BillingFlow.Api.Infrastructure;
-using Hangfire;
 using BillingFlow.Infrastructure.BackgroundJobs;
+
+using Hangfire;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +19,7 @@ builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 // builder.Services.AddBillingMigrations(builder.Configuration);
 
 // API Specific Services (Controllers, Swagger, Exception Handler, Rate Limiting)
-builder.Services.AddPresentation();
+builder.Services.AddPresentation(builder.Configuration);
 
 // Add our custom Web Authorization (from AuthorizationExtensions.cs)
 builder.Services.AddWebAuthorization(builder.Configuration);
@@ -57,6 +59,8 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
 app.InitializeHangfireJobs();
 
 app.MapControllers();
+
+app.MapHub<ClientBalanceHub>("/hubs/balance");
 
 app.Run();
 

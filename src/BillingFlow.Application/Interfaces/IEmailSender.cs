@@ -9,4 +9,5 @@ public interface IEmailSender
     Task SendEmailChangeConfirmationAsync(string newEmail, string confirmationToken, CancellationToken cancellationToken = default);
     Task SendEmailChangedNoticeAsync(string oldEmail, CancellationToken cancellationToken = default);
     Task SendClientSuspensionNoticeAsync(string toEmail, string companyName, CancellationToken cancellationToken = default);
+    Task SendInvoiceOverdueNoticeAsync(string toEmail, string companyName, string invoiceNumber, decimal amountDue, CancellationToken cancellationToken = default);
 }

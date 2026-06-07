@@ -23,6 +23,9 @@ using QuestPDF.Infrastructure;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
+/// <summary>
+/// Bootstrapper for the Infrastructure layer.
+/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)

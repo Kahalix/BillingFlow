@@ -1,9 +1,12 @@
 using System.Threading.RateLimiting;
 
 using BillingFlow.Api.Infrastructure;
+using BillingFlow.Application.Interfaces;
 
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi.Models;
+
+using StackExchange.Redis;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -13,7 +16,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddPresentation(this IServiceCollection services)
+    public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddRouting(options =>
         {
@@ -22,6 +25,20 @@ public static class DependencyInjection
 
         services.AddControllers();
         services.AddEndpointsApiExplorer();
+
+        // 1. SIGNALR REGISTRATION
+        // Register the local API implementation for the Hangfire job to resolve
+        services.AddTransient<IClientNotificationService, BillingFlow.Api.Services.SignalRClientNotificationService>();
+
+        // Configure SignalR with Redis Backplane for horizontal scaling
+        var redisConnectionString = configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("Redis connection string is missing from configuration.");
+
+        services.AddSignalR()
+            .AddStackExchangeRedis(redisConnectionString, options =>
+            {
+                options.Configuration.ChannelPrefix = RedisChannel.Literal("BillingFlow_SignalR_");
+            });
 
         // Swagger Configuration with JWT Bearer Auth
         services.AddSwaggerGen(options =>

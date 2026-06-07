@@ -22,7 +22,7 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
             .IsUnique()
             .HasFilter("[UserId] IS NOT NULL");
 
-        // Enforce the Enterprise Soft-Delete global query filter
+        // Enforce Soft-Delete global query filter
         builder.HasQueryFilter(c => c.Status != ClientStatus.Archived);
 
         // 2. Company Details & Unique Tax Index mapping

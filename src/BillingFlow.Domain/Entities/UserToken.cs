@@ -41,6 +41,8 @@ public class UserToken : Entity
 
     public void MarkAsConsumed(TimeProvider timeProvider)
     {
+        if (ConsumedAt.HasValue) return;
+
         ConsumedAt = timeProvider.GetUtcNow();
     }
 }

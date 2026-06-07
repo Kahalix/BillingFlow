@@ -1,5 +1,5 @@
 using System.Text;
-
+using System.Threading.Tasks;
 using BillingFlow.Application.Authorization;
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Interfaces;
@@ -41,9 +41,27 @@ public static class AuthorizationExtensions
                     ClockSkew = TimeSpan.Zero // Strictly respect token expiration time
                 };
 
-                // Real-time Session Revocation Check
                 options.Events = new JwtBearerEvents
                 {
+                    // --- SignalR JWT Configuration ---
+                    // SignalR (WebSockets) in browsers cannot send custom HTTP headers like "Authorization: Bearer".
+                    // Therefore, the token is passed in the query string (?access_token=...).
+                    // We must intercept this and bind it to the authentication context.
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+
+                        // Automatically bind the token if the request targets a SignalR hub
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    },
+
+                    // --- Real-time Session Revocation Check ---
                     OnTokenValidated = async context =>
                     {
                         // Resolve scoped dependencies from the current HTTP Request context
@@ -106,7 +124,7 @@ public static class AuthorizationExtensions
             .AddPolicy(AppPermissions.InvoicesRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.InvoicesRead)))
             .AddPolicy(AppPermissions.InvoicesGenerate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.InvoicesGenerate)))
             .AddPolicy(AppPermissions.InvoicesCancel, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.InvoicesCancel)))
-            
+
             // ProvidedServices
             .AddPolicy(AppPermissions.ProvidedServicesRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ProvidedServicesRead)))
             .AddPolicy(AppPermissions.ProvidedServicesCreate, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.ProvidedServicesCreate)))

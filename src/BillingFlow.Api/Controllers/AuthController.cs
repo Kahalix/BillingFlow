@@ -39,8 +39,10 @@ public class AuthController(ISender sender) : ControllerBase
     {
         var userId = await sender.Send(command, cancellationToken);
 
-        // Return 201 Created with a strictly typed DTO for OpenAPI schema correctness.
-        return Created(string.Empty, new RegisterUserResponse(userId));
+        return CreatedAtRoute(
+             routeName: "GetUserById",
+             routeValues: new { id = userId },
+             value: new RegisterUserResponse(userId));
     }
 
     /// <summary>

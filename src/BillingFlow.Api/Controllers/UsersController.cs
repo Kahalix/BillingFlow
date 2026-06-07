@@ -29,6 +29,39 @@ namespace BillingFlow.Api.Controllers;
 public class UsersController(ISender sender) : ControllerBase
 {
     /// <summary>
+    /// Retrieves a paginated and optionally filtered list of system users.
+    /// </summary>
+    [HttpGet]
+    [Authorize(Policy = AppPermissions.UsersRead)]
+    [ProducesResponseType(typeof(PaginatedList<UserSummaryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetUsers(
+        [FromQuery] GetUsersQuery query,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(query, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retrieves detailed information about a specific user.
+    /// </summary>
+    [HttpGet("{id:guid}", Name = "GetUserById")]
+    [Authorize(Policy = AppPermissions.UsersRead)]
+    [ProducesResponseType(typeof(UserDetailsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetUserById(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetUserByIdQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Retrieves the profile of the currently authenticated user.
     /// </summary>
     [HttpGet("me")]
@@ -73,39 +106,6 @@ public class UsersController(ISender sender) : ControllerBase
     {
         await sender.Send(command, cancellationToken);
         return Accepted();
-    }
-
-    /// <summary>
-    /// Retrieves a paginated and optionally filtered list of system users.
-    /// </summary>
-    [HttpGet]
-    [Authorize(Policy = AppPermissions.UsersRead)]
-    [ProducesResponseType(typeof(PaginatedList<UserSummaryDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetUsers(
-        [FromQuery] GetUsersQuery query,
-        CancellationToken cancellationToken)
-    {
-        var result = await sender.Send(query, cancellationToken);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Retrieves detailed information about a specific user.
-    /// </summary>
-    [HttpGet("{id:guid}")]
-    [Authorize(Policy = AppPermissions.UsersRead)]
-    [ProducesResponseType(typeof(UserDetailsDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetUserById(
-        [FromRoute] Guid id,
-        CancellationToken cancellationToken)
-    {
-        var result = await sender.Send(new GetUserByIdQuery(id), cancellationToken);
-        return Ok(result);
     }
 
     /// <summary>
@@ -183,9 +183,3 @@ public class UsersController(ISender sender) : ControllerBase
         return Accepted();
     }
 }
-
-/// <summary>
-/// DTO representing the request body .
-/// </summary>
-public record ChangeUserRoleRequest(Role NewRole);
-public record ChangeUserEmailRequest(string NewEmail);

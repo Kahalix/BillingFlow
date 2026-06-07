@@ -15,4 +15,10 @@ public interface IBackgroundJobClient
     /// <param name="methodCall">An expression representing the asynchronous method call to execute.</param>
     /// <returns>The unique identifier of the scheduled job.</returns>
     string Enqueue<T>(Expression<Func<T, Task>> methodCall);
+
+    /// <summary>
+    /// Schedules an asynchronous job to be executed after a specified delay.
+    /// Useful for bypassing publish-before-commit transaction race conditions.
+    /// </summary>
+    string Schedule<T>(Expression<Func<T, Task>> methodCall, TimeSpan delay);
 }

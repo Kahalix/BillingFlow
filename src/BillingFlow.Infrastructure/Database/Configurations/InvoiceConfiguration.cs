@@ -22,6 +22,11 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.HasIndex(i => i.ClientId);
         builder.HasIndex(i => i.Status);
 
+        builder.HasIndex(i => new { i.Status, i.DueDate }); // For CheckOverdueInvoicesJob
+
+        // Composite index optimized for SuspendOverdueClientsJob's EXISTS query
+        builder.HasIndex(i => new { i.ClientId, i.Status });
+
         // 2. Financial Precision Constraints
         builder.Property(i => i.TotalAmount)
             .HasColumnType("decimal(18,2)")

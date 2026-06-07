@@ -86,7 +86,7 @@ public class Client : Entity, IAggregateRoot
     public void Suspend()
     {
         if (Status == ClientStatus.Archived)
-            throw new DomainException("Cannot activate an archived client directly. It must be restored first.");
+            throw new DomainException("Cannot suspend an archived client.");
 
         if (Status == ClientStatus.Suspended) return;
 

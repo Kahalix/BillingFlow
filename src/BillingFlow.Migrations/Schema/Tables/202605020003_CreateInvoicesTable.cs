@@ -33,6 +33,18 @@ public class CreateInvoicesTable : Migration
             .OnTable("Invoices")
             .OnColumn("Status").Ascending();
 
+        // Composite index optimized for CheckOverdueInvoicesJob
+        Create.Index("IX_Invoices_Status_DueDate")
+            .OnTable("Invoices")
+            .OnColumn("Status").Ascending()
+            .OnColumn("DueDate").Ascending();
+
+        // Composite index optimized for SuspendOverdueClientsJob's EXISTS query
+        Create.Index("IX_Invoices_ClientId_Status")
+            .OnTable("Invoices")
+            .OnColumn("ClientId").Ascending()
+            .OnColumn("Status").Ascending();
+
         // (Note: The Unique Index for InvoiceNumber is separated into 202605020101_AddInvoiceNumberIndex.cs 
 
         // 2. Create InvoiceItems Table (Child Entity)

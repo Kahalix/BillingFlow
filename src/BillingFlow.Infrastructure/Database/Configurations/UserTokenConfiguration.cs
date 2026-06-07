@@ -28,9 +28,13 @@ public class UserTokenConfiguration : IEntityTypeConfiguration<UserToken>
         // Covers queries like: t.UserId == userId && t.ConsumedAt == null
         builder.HasIndex(t => new { t.UserId, t.Type, t.ConsumedAt });
 
-        // 4. Composite Index for Background Cleanup Jobs
-        // Covers queries filtering by expired tokens of specific types
-        builder.HasIndex(t => new { t.Type, t.Expiry });
+        // 4. Single Index for Background Cleanup Jobs
+        // SQL Server left-prefix rule dictates that querying solely by 'Expiry' requires 'Expiry' to be the leading column.
+        builder.HasIndex(t => t.Expiry);
+
+        //// 4. Composite Index for Background Cleanup Jobs
+        //// Covers queries filtering by expired tokens of specific types
+        //builder.HasIndex(t => new { t.Type, t.Expiry });
 
         builder.Property(t => t.ConsumedAt)
             .IsRequired(false);

@@ -38,11 +38,17 @@ public class CreateUserTokensTable : Migration
             .OnColumn("Type").Ascending()
             .OnColumn("ConsumedAt").Ascending();
 
-        // 4. Composite Index for Cleanup Jobs
-        Create.Index("IX_UserTokens_Type_Expiry")
+
+        // 4. Single Index for Cleanup Jobs (Optimized for WHERE Expiry <= @now)
+        Create.Index("IX_UserTokens_Expiry")
             .OnTable("UserTokens")
-            .OnColumn("Type").Ascending()
             .OnColumn("Expiry").Ascending();
+
+        //// 4. Composite Index for Cleanup Jobs
+        //Create.Index("IX_UserTokens_Type_Expiry")
+        //    .OnTable("UserTokens")
+        //    .OnColumn("Type").Ascending()
+        //    .OnColumn("Expiry").Ascending();
     }
 
     public override void Down()

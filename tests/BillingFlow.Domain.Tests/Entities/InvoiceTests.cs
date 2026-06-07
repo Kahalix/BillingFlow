@@ -1,13 +1,10 @@
 using System;
 using System.Linq;
-
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
 using BillingFlow.Domain.Events;
 using BillingFlow.Domain.Exceptions;
-
 using FluentAssertions;
-
 using Xunit;
 
 namespace BillingFlow.Domain.Tests.Entities;
@@ -131,5 +128,80 @@ public class InvoiceTests
         var domainEvent = invoice.DomainEvents.OfType<InvoiceCanceledEvent>().SingleOrDefault();
         domainEvent.Should().NotBeNull();
         domainEvent!.TotalAmount.Should().Be(1000m);
+    }
+
+    [Fact]
+    public void Cancel_WhenPartiallyPaid_ShouldThrowDomainException()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate);
+        invoice.AddLineItem("Consulting", 1000m, 1);
+        invoice.Issue(); // Translates to Unpaid
+        invoice.ApplyPayment(400m); // Transitions to PartiallyPaid
+
+        // Act & Assert
+        Action action = () => invoice.Cancel();
+        action.Should().Throw<DomainException>()
+            .WithMessage("Cannot cancel an invoice that has already received payments. Issue a refund instead.");
+    }
+
+    [Fact]
+    public void MarkAsOverdue_WhenDueDateHasNotPassed_ShouldThrowDomainException()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate, 14);
+        invoice.AddLineItem("Consulting", 1000m, 1);
+        invoice.Issue();
+
+        var beforeDueDate = invoice.DueDate.AddDays(-1);
+
+        // Act & Assert
+        Action action = () => invoice.MarkAsOverdue(beforeDueDate);
+        action.Should().Throw<DomainException>()
+            .WithMessage("Cannot mark as overdue. The due date has not yet passed.");
+    }
+
+    [Fact]
+    public void MarkAsOverdue_WhenDueDatePassedAndUnpaid_ShouldChangeStatusAndEmitEvent()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate, 14);
+        invoice.AddLineItem("Consulting", 1000m, 1);
+        invoice.Issue();
+
+        var afterDueDate = invoice.DueDate.AddDays(1);
+        var expectedDebt = invoice.TotalAmount;
+
+        // Act
+        invoice.MarkAsOverdue(afterDueDate);
+
+        // Assert
+        invoice.Status.Should().Be(InvoiceStatus.Overdue);
+
+        var domainEvent = invoice.DomainEvents.OfType<InvoiceOverdueEvent>().SingleOrDefault();
+        domainEvent.Should().NotBeNull();
+        domainEvent!.InvoiceId.Should().Be(invoice.Id);
+        domainEvent.AmountDue.Should().Be(expectedDebt);
+    }
+
+    [Fact]
+    public void MarkAsOverdue_WhenAlreadyOverdue_ShouldBeIdempotentAndNotEmitSecondEvent()
+    {
+        // Arrange
+        var invoice = Invoice.Create(_clientId, _ownerUserId, _invoiceNumber, _issueDate, 14);
+        invoice.AddLineItem("Consulting", 1000m, 1);
+        invoice.Issue();
+
+        var afterDueDate = invoice.DueDate.AddDays(1);
+
+        invoice.MarkAsOverdue(afterDueDate);
+        invoice.ClearDomainEvents();
+
+        // Act
+        invoice.MarkAsOverdue(afterDueDate);
+
+        // Assert
+        invoice.Status.Should().Be(InvoiceStatus.Overdue);
+        invoice.DomainEvents.Should().BeEmpty();
     }
 }

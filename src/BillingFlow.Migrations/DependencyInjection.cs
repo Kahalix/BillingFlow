@@ -5,6 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
+/// <summary>
+/// Bootstrapper for the Migrations layer.
+/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddBillingMigrations(this IServiceCollection services, IConfiguration configuration)
