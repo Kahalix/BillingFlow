@@ -27,6 +27,14 @@ public static class HangfireExtensions
             "*/10 * * * *" // Run every 10 minutes
         );
 
+        // Security token cleanup
+        recurringJobManager.AddOrUpdate<CleanupExpiredTokensJob>(
+            "cleanup-expired-tokens",
+            job => job.ExecuteAsync(CancellationToken.None),
+            "0 * * * *", // Run at minute 0 past every hour (Hourly)
+            options
+        );
+
         // 2. Financial Operations
         recurringJobManager.AddOrUpdate<CheckOverdueInvoicesJob>(
             "check-overdue-invoices",
