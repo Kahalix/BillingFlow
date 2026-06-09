@@ -1,0 +1,1039 @@
+{
+  "info": {
+    "_postman_id": "ec1b4b2f-9c41-42f8-8c2b-06d866b70094",
+    "name": "BillingFlow API",
+    "description": "Test collection for the BillingFlow invoicing and payment system. Configured for local Docker execution (HTTP/WS) with automated token management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth & Session",
+      "description": "Authentication and session management.",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set(\"authToken\", jsonData.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    console.log(\"Tokens successfully captured and saved to collection variables.\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testUserEmail}}\",\n  \"password\": \"{{testUserPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set(\"authToken\", jsonData.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    console.log(\"Tokens successfully rotated.\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testUserEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users (Admin)",
+      "description": "User management (Requires Admin or Manager roles).",
+      "item": [
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Users List",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?pageNumber=1&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "pageNumber",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "FilterByRole",
+                  "value": "4",
+                  "disabled": true,
+                  "description": "Filter by Role (e.g., 4 = Customer)"
+                },
+                {
+                  "key": "SearchTerm",
+                  "value": "john.doe",
+                  "disabled": true,
+                  "description": "Search by email"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register New User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new_employee@billingflow.com\",\n  \"password\": \"SecurePass123!\",\n  \"targetRole\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Suspend User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}/suspend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{targetUserId}}",
+                "suspend"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change User Role",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newRole\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{targetUserId}}",
+                "role"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Clients & Services",
+      "item": [
+        {
+          "name": "Get My Client Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/clients/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Clients List (Back-Office)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/clients?pageNumber=1&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clients"
+              ],
+              "query": [
+                {
+                  "key": "pageNumber",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "Status",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "1 = Active, 2 = Suspended, 3 = Archived"
+                },
+                {
+                  "key": "SearchTerm",
+                  "value": "Corp",
+                  "disabled": true,
+                  "description": "Search by Company Name or TaxId"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Client (Back-Office)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"New Tech Startup LLC\",\n  \"taxId\": \"TAX-123456\",\n  \"street\": \"123 Innovation Drive\",\n  \"city\": \"San Francisco\",\n  \"postalCode\": \"94105\",\n  \"country\": \"USA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Provided Services List",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/providedservices?pageNumber=1&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "providedservices"
+              ],
+              "query": [
+                {
+                  "key": "pageNumber",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "FilterByClientId",
+                  "value": "{{clientId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "FilterByStatus",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "1 = Unbilled, 2 = Billed, 3 = Canceled"
+                },
+                {
+                  "key": "SearchTerm",
+                  "value": "Consulting",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Provided Service",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Server Setup and Migration\",\n  \"amount\": 1500.00,\n  \"performedAt\": \"2026-05-10T09:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clients/{{clientId}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "{{clientId}}",
+                "services"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Invoices",
+      "item": [
+        {
+          "name": "Get Invoices List",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices?pageNumber=1&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "invoices"
+              ],
+              "query": [
+                {
+                  "key": "pageNumber",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "FilterByClientId",
+                  "value": "{{clientId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "FilterByStatus",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "1=Draft, 2=Unpaid, 3=PartiallyPaid, 4=Paid, 5=Overdue, 6=Canceled"
+                },
+                {
+                  "key": "SearchTerm",
+                  "value": "INV",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{unpaidInvoiceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "invoices",
+                "{{unpaidInvoiceId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Generate Invoice (Back-Office)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"fromDate\": \"2026-05-01T00:00:00Z\",\n  \"toDate\": \"2026-05-31T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "invoices",
+                "generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Invoice PDF",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{unpaidInvoiceId}}/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "invoices",
+                "{{unpaidInvoiceId}}",
+                "pdf"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Payments",
+      "item": [
+        {
+          "name": "Get Payments List",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments?pageNumber=1&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "pageNumber",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "FilterByClientId",
+                  "value": "{{clientId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "FilterByInvoiceId",
+                  "value": "{{unpaidInvoiceId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "FilterByProvider",
+                  "value": "2",
+                  "disabled": true,
+                  "description": "1 = Stripe, 2 = Manual"
+                },
+                {
+                  "key": "FilterByMethod",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "1 = CreditCard, 2 = BankTransfer"
+                },
+                {
+                  "key": "SearchTerm",
+                  "value": "INV",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Payment Session (Stripe)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": \"{{unpaidInvoiceId}}\",\n  \"successUrl\": \"http://localhost:8080/payment/success\",\n  \"cancelUrl\": \"http://localhost:8080/payment/cancel\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/session",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "session"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Manual Payment (Back-Office)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": \"{{unpaidInvoiceId}}\",\n  \"amount\": 2000.00,\n  \"method\": 2,\n  \"paymentDate\": \"2026-05-03T12:00:00Z\",\n  \"notes\": \"Bank transfer manually booked by back-office.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/manual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "manual"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Reports",
+      "item": [
+        {
+          "name": "Get Monthly Revenue",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/monthly-revenue?year=2026&month=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "monthly-revenue"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2026"
+                },
+                {
+                  "key": "month",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Webhooks",
+      "item": [
+        {
+          "name": "Stripe Webhook (Mock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Stripe-Signature",
+                "value": "t=123,v1=valid",
+                "description": "Mocked signature for testing without actual Stripe CLI"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_test_12345\",\n  \"type\": \"checkout.session.completed\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"cs_test_123\",\n      \"payment_intent\": \"pi_test_123\",\n      \"metadata\": {\n        \"InvoiceId\": \"{{unpaidInvoiceId}}\"\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/webhooks/stripe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "stripe"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Real-Time (SignalR)",
+      "item": [
+        {
+          "name": "1. Negotiate Connection",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/balance/negotiate?negotiateVersion=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "balance",
+                "negotiate"
+              ],
+              "query": [
+                {
+                  "key": "negotiateVersion",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "This request uses standard HTTP to check if the server is ready to establish a SignalR connection."
+          }
+        },
+        {
+          "name": "2. Connect to Hub (Instructions)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{wsUrl}}/hubs/balance?access_token={{authToken}}",
+              "host": [
+                "{{wsUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "balance"
+              ],
+              "query": [
+                {
+                  "key": "access_token",
+                  "value": "{{authToken}}"
+                }
+              ]
+            },
+            "description": "NOTE: Postman cannot open a WebSocket connection from a standard HTTP tab.\n\nSTEP 1: COPY THIS URL:\nws://localhost:8080/hubs/balance?access_token={{authToken}}\n\nSTEP 2: Open a new 'WebSocket Request' tab in Postman, paste the URL, and click 'Connect'.\n\nSTEP 3: IMMEDIATELY (within 15 seconds) paste the handshake message into the 'Message' box and click 'Send'."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "wsUrl",
+      "value": "ws://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "testUserEmail",
+      "value": "admin@billingflow.com",
+      "type": "string"
+    },
+    {
+      "key": "testUserPassword",
+      "value": "Admin@1234",
+      "type": "string"
+    },
+    {
+      "key": "targetUserId",
+      "value": "00000000-0000-0000-0000-000000000102",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "WILL_BE_AUTO_POPULATED_BY_LOGIN_SCRIPT",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "WILL_BE_AUTO_POPULATED_BY_LOGIN_SCRIPT",
+      "type": "string"
+    },
+    {
+      "key": "clientId",
+      "value": "00000000-0000-0000-0000-000000000202",
+      "type": "string"
+    },
+    {
+      "key": "unpaidInvoiceId",
+      "value": "00000000-0000-0000-0000-000000000401",
+      "type": "string"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11806.211 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{906C54FE-1BDB-45A1-B80F-9527E7A414DD}"
 EndProject
@@ -15,13 +15,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingFlow.Infrastructure"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A2F8D5B0-4C2E-4B64-8C6A-2F8E4D5B1C01}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.env = .env
+		.env.example = .env.example
+		.gitignore = .gitignore
 		Directory.Build.props = Directory.Build.props
 		Directory.Packages.props = Directory.Packages.props
-		.editorconfig = .editorconfig
-		.gitignore = .gitignore
-		.env = .env
-		README.md = README.md
 		docker-compose.yml = docker-compose.yml
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingFlow.Migrations", "src\BillingFlow.Migrations\BillingFlow.Migrations.csproj", "{B22B3570-8E22-4877-89AA-476A4B9E164C}"
@@ -38,9 +39,6 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{B6914511-6FB3-418E-89B8-86E22C5B0111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -76,6 +74,9 @@ Global
 		{10A6D42C-FF13-4A33-8EB3-5E32B89E5A00}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{10A6D42C-FF13-4A33-8EB3-5E32B89E5A00}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B6914511-6FB3-418E-89B8-86E22C5B0111} = {906C54FE-1BDB-45A1-B80F-9527E7A414DD}
 		{927AC348-EB52-435B-A25E-ED52CC4019DB} = {906C54FE-1BDB-45A1-B80F-9527E7A414DD}
@@ -85,5 +86,8 @@ Global
 		{EA005416-BB6B-41CE-A485-3F219E05D71A} = {BF5CE11E-8EE3-4A2C-BD6F-EE176BB027F8}
 		{211C1444-D3EE-4CA8-A9E9-EAA366F1DBD7} = {BF5CE11E-8EE3-4A2C-BD6F-EE176BB027F8}
 		{10A6D42C-FF13-4A33-8EB3-5E32B89E5A00} = {BF5CE11E-8EE3-4A2C-BD6F-EE176BB027F8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F883879E-866B-4951-AE2B-E6BE4D6A2A79}
 	EndGlobalSection
 EndGlobal
