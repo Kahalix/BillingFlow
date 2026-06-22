@@ -19,6 +19,13 @@ public static class HangfireExtensions
         var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
         var options = new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc };
 
+        recurringJobManager.AddOrUpdate<ProcessOutboxMessagesJob>(
+            "process-outbox-messages",
+            job => job.ExecuteAsync(CancellationToken.None),
+            "* * * * *", // Every minute
+            options
+        );
+
         // 1. Technical Garbage Collection
         // Expires stale checkout sessions to free up database locks
         recurringJobManager.AddOrUpdate<CleanupExpiredPaymentAttemptsJob>(

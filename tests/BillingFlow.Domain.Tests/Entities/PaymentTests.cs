@@ -13,7 +13,7 @@ namespace BillingFlow.Domain.Tests.Entities;
 public class PaymentTests
 {
     private readonly Guid _invoiceId = Guid.NewGuid();
-    private readonly Guid _clientId = Guid.NewGuid(); // Added ClientId
+    private readonly Guid _clientId = Guid.NewGuid();
     private readonly Guid _paymentAttemptId = Guid.NewGuid();
     private readonly Guid _receivedByUserId = Guid.NewGuid();
     private readonly decimal _amount = 100m;

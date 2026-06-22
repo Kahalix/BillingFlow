@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Common; // To detect Entity base class
-using BillingFlow.Infrastructure.Auditing; // New namespace for AuditLog
+using BillingFlow.Infrastructure.Auditing;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;

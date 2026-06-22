@@ -24,7 +24,6 @@ public class DownloadInvoicePdfHandlerTests
         var invoiceId = Guid.NewGuid();
         var query = new DownloadInvoicePdfQuery(invoiceId);
 
-        // NAPRAWIONE: Użycie właściwej fabryki DTO z warstwy aplikacji
         var model = ApplicationDtoFactory.CreateInvoiceDetailsModel(
             invoiceId,
             invoiceNumber: "INV/2026/05/001");

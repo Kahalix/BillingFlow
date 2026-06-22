@@ -23,7 +23,6 @@ public class GetInvoiceDetailsHandlerTests
         var invoiceId = Guid.NewGuid();
         var query = new GetInvoiceDetailsQuery(invoiceId);
 
-        // NAPRAWIONE: Użycie właściwej fabryki DTO z warstwy aplikacji
         var expectedModel = ApplicationDtoFactory.CreateInvoiceDetailsModel(invoiceId);
 
         var dataProviderMock = new Mock<IInvoiceDataProvider>();

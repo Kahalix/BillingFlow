@@ -1,8 +1,8 @@
-using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Features.Clients.IntegrationEvents;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Events;
 
@@ -14,13 +14,14 @@ using Microsoft.Extensions.Logging;
 namespace BillingFlow.Application.Features.Clients.EventHandlers;
 
 /// <summary>
-/// Reacts to a client being suspended in the domain.
-/// Dispatches a delayed background job to notify the client via email.
+/// Reacts to a client being suspended within the domain.
+/// Acts as a translation layer: it listens for internal Domain Events and translates them 
+/// into external Integration Events via the Transactional Outbox.
 /// </summary>
 public class ClientSuspendedEventHandler(
     ILogger<ClientSuspendedEventHandler> logger,
     IApplicationDbContext context,
-    IBackgroundJobClient backgroundJobs) : INotificationHandler<ClientSuspendedEvent>
+    IIntegrationEventPublisher eventPublisher) : INotificationHandler<ClientSuspendedEvent>
 {
     public async Task Handle(ClientSuspendedEvent notification, CancellationToken cancellationToken)
     {
@@ -31,27 +32,18 @@ public class ClientSuspendedEventHandler(
             from c in context.Clients.AsNoTracking()
             join u in context.Users.AsNoTracking() on c.UserId equals u.Id
             where c.Id == notification.ClientId && c.UserId != null
-            select new
-            {
-                u.Email,
-                c.CompanyName
-            })
+            select new { u.Email, c.CompanyName })
             .SingleOrDefaultAsync(cancellationToken);
 
         if (payload is null)
         {
-            logger.LogWarning("Cannot send suspension notice. Client {ClientId} has no associated AppUser or email.", notification.ClientId);
+            logger.LogWarning("Cannot send suspension notice. Client {ClientId} lacks an associated AppUser or email.", notification.ClientId);
             return;
         }
 
-        // PRAGMATIC TRADE-OFF: Hardcoding a 1-minute delay to mitigate the "publish-before-commit" risk. TODO
-        // This gives the database transaction ample time to commit the 'Suspended' status before the email is dispatched.
-        // This is a temporary safeguard and should be replaced by the Transactional Outbox pattern in the future.
-        backgroundJobs.Schedule<IEmailSender>(sender =>
-            sender.SendClientSuspensionNoticeAsync(
-                payload.Email,
-                payload.CompanyName,
-                default),
-            TimeSpan.FromMinutes(1));
+        // The publisher will serialize this intent into the current Entity Framework ChangeTracker, 
+        // guaranteeing it is saved atomically with the Client's suspension status.
+        eventPublisher.Publish(
+            new SendClientSuspensionNoticeEvent(payload.Email, payload.CompanyName));
     }
 }

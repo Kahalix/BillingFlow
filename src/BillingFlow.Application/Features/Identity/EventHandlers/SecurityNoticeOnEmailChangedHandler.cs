@@ -1,3 +1,7 @@
+using System.Threading;
+using System.Threading.Tasks;
+
+using BillingFlow.Application.Features.Identity.IntegrationEvents;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Events;
 
@@ -5,15 +9,20 @@ using MediatR;
 
 namespace BillingFlow.Application.Features.Identity.EventHandlers;
 
-public class SecurityNoticeOnEmailChangedHandler(IBackgroundJobClient backgroundJobs)
-    : INotificationHandler<EmailChangedEvent>
+/// <summary>
+/// Reacts to an internal domain EmailChangedEvent.
+/// Safely delegates the security notice transmission to the Transactional Outbox,
+/// ensuring the email is only sent if the underlying database transaction commits successfully.
+/// </summary>
+public class SecurityNoticeOnEmailChangedHandler(
+    IIntegrationEventPublisher eventPublisher) : INotificationHandler<EmailChangedEvent>
 {
     public Task Handle(EmailChangedEvent notification, CancellationToken cancellationToken)
     {
-        // Delegate the dispatch of the security notice to the old email address via Hangfire.
-        // CancellationToken.None is required here because Hangfire manages cancellation within its own lifecycle.
-        backgroundJobs.Enqueue<IEmailSender>(sender =>
-            sender.SendEmailChangedNoticeAsync(notification.OldEmail, CancellationToken.None));
+        // By publishing an integration event instead of calling Hangfire directly, 
+        // we guarantee atomic consistency. If the EF Core transaction fails, 
+        // this outbound intent is automatically rolled back.
+        eventPublisher.Publish(new SendSecurityNoticeOnEmailChangedEvent(notification.OldEmail));
 
         return Task.CompletedTask;
     }

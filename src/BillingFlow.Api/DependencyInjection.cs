@@ -45,7 +45,7 @@ public static class DependencyInjection
         {
             options.SwaggerDoc("v1", new OpenApiInfo { Title = "BillingFlow API", Version = "v1" });
 
-            // 1. Define the security scheme (UPDATED for automatic 'Bearer ' prefix)
+            // 1. Define the security scheme
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Description = "Enter your JWT token directly below. Swagger will automatically add the 'Bearer ' prefix.",

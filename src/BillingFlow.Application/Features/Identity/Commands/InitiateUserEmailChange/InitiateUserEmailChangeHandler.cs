@@ -1,4 +1,9 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
 using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Features.Identity.IntegrationEvents;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
@@ -14,7 +19,7 @@ public class InitiateUserEmailChangeHandler(
     IApplicationDbContext context,
     ITokenGenerator tokenGenerator,
     ITokenHashService tokenHashService,
-    IBackgroundJobClient backgroundJobs,
+    IIntegrationEventPublisher eventPublisher,
     TimeProvider timeProvider)
     : IRequestHandler<InitiateUserEmailChangeCommand>
 {
@@ -53,10 +58,11 @@ public class InitiateUserEmailChangeHandler(
             data: normalizedNewEmail);
 
         context.UserTokens.Add(token);
-        await context.SaveChangesAsync(cancellationToken);
 
-        // 4. Dispatch the email via Hangfire
-        backgroundJobs.Enqueue<IEmailSender>(sender =>
-            sender.SendEmailChangeConfirmationAsync(normalizedNewEmail, rawToken, CancellationToken.None));
+        // 4. Register the outbound email intent in the same atomic transaction
+        eventPublisher.Publish(new SendEmailChangeConfirmationEvent(normalizedNewEmail, rawToken));
+
+        // 5. Commit state and integration log atomically
+        await context.SaveChangesAsync(cancellationToken);
     }
 }

@@ -1,8 +1,8 @@
-using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Features.Invoices.IntegrationEvents;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Events;
 
@@ -14,19 +14,20 @@ using Microsoft.Extensions.Logging;
 namespace BillingFlow.Application.Features.Invoices.EventHandlers;
 
 /// <summary>
-/// Reacts to an invoice transitioning to the Overdue status.
-/// Dispatches a delayed background job to notify the client via email asynchronously.
+/// Reacts to an internal domain InvoiceOverdueEvent.
+/// Coordinates read-side lookups and pushes a technical Integration Event into the Outbox pipeline
+/// to guarantee at-least-once notification delivery without violating boundary context transaction safety.
 /// </summary>
 public class InvoiceOverdueEventHandler(
     ILogger<InvoiceOverdueEventHandler> logger,
     IApplicationDbContext context,
-    IBackgroundJobClient backgroundJobs) : INotificationHandler<InvoiceOverdueEvent>
+    IIntegrationEventPublisher eventPublisher) : INotificationHandler<InvoiceOverdueEvent>
 {
     public async Task Handle(InvoiceOverdueEvent notification, CancellationToken cancellationToken)
     {
         logger.LogInformation("Domain Event Triggered: Invoice {InvoiceId} is overdue.", notification.InvoiceId);
 
-        // Fetch necessary routing details using a single optimized database roundtrip
+        // Fetch necessary routing details using a single optimized database roundtrip (LINQ Joins)
         var payload = await (
             from i in context.Invoices.AsNoTracking()
             join c in context.Clients.AsNoTracking() on i.ClientId equals c.Id
@@ -46,16 +47,13 @@ public class InvoiceOverdueEventHandler(
             return;
         }
 
-        // PRAGMATIC TRADE-OFF: Hardcoding a 1-minute delay to mitigate the "publish-before-commit" risk. TODO
-        // This ensures the database transaction has successfully committed the 'Overdue' status before the email is dispatched.
-        // This is a temporary safeguard and should be replaced by the Transactional Outbox pattern in the future.
-        backgroundJobs.Schedule<IEmailSender>(sender =>
-            sender.SendInvoiceOverdueNoticeAsync(
+        // We capture the data snapshot
+        // and delegate delivery reliability to the infrastructural transactional integration outbox log.
+        eventPublisher.Publish(
+            new SendInvoiceOverdueNoticeEvent(
                 payload.Email,
                 payload.CompanyName,
                 payload.InvoiceNumber,
-                notification.AmountDue,
-                default),
-            TimeSpan.FromMinutes(1));
+                notification.AmountDue));
     }
 }

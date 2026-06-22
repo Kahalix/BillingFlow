@@ -1,3 +1,8 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Events;
 
@@ -13,25 +18,21 @@ namespace BillingFlow.Application.Features.Identity.EventHandlers;
 /// </summary>
 public class UserSuspendedEventHandler(
     IApplicationDbContext context,
-    TimeProvider timeProvider)
-    : INotificationHandler<UserSuspendedEvent>
+    TimeProvider timeProvider) : INotificationHandler<UserSuspendedEvent>
 {
     public async Task Handle(UserSuspendedEvent notification, CancellationToken cancellationToken)
     {
-        // 1. Find all active tokens for the suspended user
+        // 1. Find all active tokens for the suspended user.
         var activeTokens = await context.UserTokens
             .Where(t => t.UserId == notification.UserId && t.ConsumedAt == null)
             .ToListAsync(cancellationToken);
 
         if (!activeTokens.Any()) return;
 
-        // 2. Consume (invalidate) all of them
+        // 2. Consume (invalidate) all active tokens in memory.
         foreach (var token in activeTokens)
         {
             token.MarkAsConsumed(timeProvider);
         }
-
-        // 3. Persist the invalidations
-        await context.SaveChangesAsync(cancellationToken);
     }
 }

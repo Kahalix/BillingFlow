@@ -1,12 +1,13 @@
-using AuditLog = BillingFlow.Infrastructure.Auditing.AuditLog;
-
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
+using BillingFlow.Infrastructure.Outbox.Models;
 
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
+using AuditLog = BillingFlow.Infrastructure.Auditing.AuditLog;
 
 namespace BillingFlow.Infrastructure.Database;
 
@@ -25,6 +26,7 @@ public class BillingDbContext(
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<StripeEventLog> StripeEventLogs => Set<StripeEventLog>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

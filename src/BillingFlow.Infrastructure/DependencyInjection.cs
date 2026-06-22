@@ -7,6 +7,7 @@ using BillingFlow.Infrastructure.Identity;
 using BillingFlow.Infrastructure.Invoices;
 using BillingFlow.Infrastructure.Projections;
 using BillingFlow.Infrastructure.Stripe;
+using BillingFlow.Infrastructure.Outbox;
 
 using Hangfire;
 using Hangfire.SqlServer;
@@ -121,6 +122,18 @@ public static class DependencyInjection
 
         // Register our custom abstraction to decouple the Application layer from Hangfire
         services.AddTransient<BillingFlow.Application.Interfaces.IBackgroundJobClient, HangfireService>();
+
+
+        // 4. Transactional Outbox Pattern
+
+        // CRITICAL: Registered as Scoped. 
+        // We want IIntegrationEventPublisher to share the exact same Scoped BillingDbContext instance 
+        // as the rest of the HTTP request transaction. This guarantees that SaveChangesAsync 
+        // commits the outbox message atomically alongside domain changes.
+        services.AddScoped<IIntegrationEventPublisher, OutboxEventPublisher>();
+
+        // Transient: The dispatcher is stateless and simply translates and routes payloads to the actual broker.
+        services.AddTransient<IIntegrationEventDispatcher, HangfireIntegrationEventDispatcher>();
 
         return services;
     }

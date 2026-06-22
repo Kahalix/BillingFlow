@@ -1,3 +1,8 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+using BillingFlow.Application.Features.Identity.IntegrationEvents;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
@@ -8,11 +13,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Identity.Commands.RequestPasswordReset;
 
+/// <summary>
+/// Handles the initiation of a password reset flow.
+/// Orchestrates token generation and durably queues the email transmission via the Transactional Outbox.
+/// </summary>
 public class RequestPasswordResetHandler(
     IApplicationDbContext context,
     ITokenGenerator tokenGenerator,
     ITokenHashService tokenHashService,
-    IBackgroundJobClient backgroundJobs,
+    IIntegrationEventPublisher eventPublisher,
     TimeProvider timeProvider)
     : IRequestHandler<RequestPasswordResetCommand>
 {
@@ -48,11 +57,13 @@ public class RequestPasswordResetHandler(
             now);
 
         context.UserTokens.Add(userToken);
-        await context.SaveChangesAsync(cancellationToken);
 
-        // 3. Dispatch the email via Hangfire (Background Job)
-        // This prevents the HTTP request from blocking/hanging while waiting for the SMTP server response.
-        backgroundJobs.Enqueue<IEmailSender>(sender =>
-            sender.SendPasswordResetEmailAsync(user.Email, rawToken, CancellationToken.None));
+        // We declare the intent to send the email BEFORE committing the transaction.
+        // The publisher serializes this intent into the EF Core ChangeTracker.
+        // Both the UserToken and the OutboxMessage will be saved atomically in Step 4.
+        eventPublisher.Publish(new SendPasswordResetEmailEvent(user.Email, rawToken));
+
+        // 4. Commit everything atomically
+        await context.SaveChangesAsync(cancellationToken);
     }
 }

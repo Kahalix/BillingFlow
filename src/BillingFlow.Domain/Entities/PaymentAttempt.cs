@@ -9,7 +9,7 @@ namespace BillingFlow.Domain.Entities;
 /// <summary>
 /// Tracks an asynchronous online payment attempt.
 /// Agnostic to the specific gateway (Stripe, PayPal, etc.) to ensure the Domain is future-proof.
-/// Implements the Reservation (Two-Phase Commit) pattern to prevent external API race conditions.
+/// Implements the Reservation pattern to prevent external API race conditions.
 /// </summary>
 public class PaymentAttempt : Entity, IAggregateRoot
 {
