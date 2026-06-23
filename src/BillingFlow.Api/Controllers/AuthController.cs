@@ -50,6 +50,7 @@ public class AuthController(ISender sender) : ControllerBase
     /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("LoginPolicy")]
     [ProducesResponseType(typeof(AuthTokensResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -146,7 +147,7 @@ public class AuthController(ISender sender) : ControllerBase
     /// </summary>
     [HttpPost("confirm-email-change")]
     [AllowAnonymous]
-    [EnableRateLimiting("PasswordResetPolicy")]
+    [EnableRateLimiting("EmailVerificationPolicy")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]

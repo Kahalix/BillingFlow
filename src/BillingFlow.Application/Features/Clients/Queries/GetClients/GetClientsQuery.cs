@@ -15,4 +15,4 @@ public record GetClientsQuery(
     int PageSize = 10,
     string? SearchTerm = null,
     ClientStatus? Status = null
-) : IRequest<PaginatedList<ClientSummaryDto>>, IRequirePolicy; // Added IRequirePolicy
+) : IRequest<PaginatedList<ClientSummaryDto>>, IRequirePolicy;

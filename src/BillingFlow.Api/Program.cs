@@ -1,3 +1,5 @@
+using System.Net;
+
 using BillingFlow.Api.Extensions;
 using BillingFlow.Api.Hubs;
 using BillingFlow.Api.Infrastructure;
@@ -15,9 +17,6 @@ builder.Services.AddApplication();
 // Infrastructure Layer (EF Core, Identity, JWT Setup)
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
-// Migrations Layer (FluentMigrator)
-// builder.Services.AddBillingMigrations(builder.Configuration);
-
 // API Specific Services (Controllers, Swagger, Exception Handler, Rate Limiting)
 builder.Services.AddPresentation(builder.Configuration);
 
@@ -28,7 +27,11 @@ var app = builder.Build();
 
 // --- 2. CONFIGURE HTTP REQUEST PIPELINE ---
 
-// Global Exception Handler MUST be first in the pipeline
+// PIPELINE ORDERING:
+// 1. Resolve true client IP and Protocol from the NGINX Edge Gateway.
+app.UseForwardedHeaders();
+
+// 2. Catch and format all unhandled exceptions gracefully.
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
@@ -37,29 +40,33 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// PRODUCTION SECURITY REFACTOR:
+// app.UseHttpsRedirection() has been intentionally removed.
+// In this architecture, TLS/SSL termination is handled exclusively by the Edge Gateway (NGINX).
+// The internal .NET Kestrel server operates securely via plain HTTP within the isolated Docker bridge network.
 
-// Routing & Rate Limiting (MUST be in this order and before Auth)
+// 3. Endpoint Resolution (Identify which controller/action is being targeted)
 app.UseRouting();
+
+// 4. Identity Resolution (Parse JWT and populate context.User)
+app.UseAuthentication();
+
+// 5. Traffic Control (Evaluate User/IP limits BEFORE executing complex authorization policies)
 app.UseRateLimiter();
 
-// Authentication MUST come before Authorization
-app.UseAuthentication();
+// 6. Access Control (Verify if the identified, un-throttled user has the required permissions)
 app.UseAuthorization();
 
-// --- Hangfire Dashboard Mapping ---
-// We map it globally, but apply different authorization rules based on the environment.
+// 7. Map Infrastructure & Application Endpoints
 app.MapHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = app.Environment.IsDevelopment()
-        ? [] // Local dev: No auth required
-        : [new HangfireAuthorizationFilter()] // Production: Only Admins
+        ? []
+        : [new HangfireAuthorizationFilter()]
 });
 
 app.InitializeHangfireJobs();
-
 app.MapControllers();
-
 app.MapHub<ClientBalanceHub>("/hubs/balance");
 
 app.Run();

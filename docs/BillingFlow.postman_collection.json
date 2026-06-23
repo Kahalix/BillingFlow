@@ -790,7 +790,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"invoiceId\": \"{{unpaidInvoiceId}}\",\n  \"successUrl\": \"http://localhost:8080/payment/success\",\n  \"cancelUrl\": \"http://localhost:8080/payment/cancel\"\n}"
+              "raw": "{\n  \"invoiceId\": \"{{unpaidInvoiceId}}\",\n  \"successUrl\": \"http://localhost/payment/success\",\n  \"cancelUrl\": \"http://localhost/payment/cancel\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payments/session",
@@ -983,7 +983,7 @@
                 }
               ]
             },
-            "description": "NOTE: Postman cannot open a WebSocket connection from a standard HTTP tab.\n\nSTEP 1: COPY THIS URL:\nws://localhost:8080/hubs/balance?access_token={{authToken}}\n\nSTEP 2: Open a new 'WebSocket Request' tab in Postman, paste the URL, and click 'Connect'.\n\nSTEP 3: IMMEDIATELY (within 15 seconds) paste the handshake message into the 'Message' box and click 'Send'."
+            "description": "NOTE: Postman cannot open a WebSocket connection from a standard HTTP tab.\n\nSTEP 1: COPY THIS URL:\nws://localhost/hubs/balance?access_token={{authToken}}\n\nSTEP 2: Open a new 'WebSocket Request' tab in Postman, paste the URL, and click 'Connect'.\n\nSTEP 3: IMMEDIATELY (within 15 seconds) paste the handshake message into the 'Message' box and click 'Send'."
           }
         }
       ]
@@ -992,12 +992,12 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080",
+      "value": "http://localhost",
       "type": "string"
     },
     {
       "key": "wsUrl",
-      "value": "ws://localhost:8080",
+      "value": "ws://localhost",
       "type": "string"
     },
     {

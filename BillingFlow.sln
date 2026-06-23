@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.6.11806.211 stable
+VisualStudioVersion = 18.6.11806.211
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{906C54FE-1BDB-45A1-B80F-9527E7A414DD}"
 EndProject
@@ -34,6 +34,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingFlow.Application.Tests", "tests\BillingFlow.Application.Tests\BillingFlow.Application.Tests.csproj", "{211C1444-D3EE-4CA8-A9E9-EAA366F1DBD7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingFlow.IntegrationTests", "tests\BillingFlow.IntegrationTests\BillingFlow.IntegrationTests.csproj", "{10A6D42C-FF13-4A33-8EB3-5E32B89E5A00}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nginx", "nginx", "{68025048-C84F-4B29-B9EE-059E9F9F2050}"
+	ProjectSection(SolutionItems) = preProject
+		nginx\nginx.conf.template = nginx\nginx.conf.template
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

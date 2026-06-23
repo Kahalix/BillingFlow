@@ -1,4 +1,27 @@
 services:
+  # --- 0. EDGE API GATEWAY (NGINX - CLOUD NATIVE) ---
+  nginx:
+    image: nginx:alpine
+    container_name: billingflow_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - NGINX_API_RATE=${NGINX_API_RATE}
+      - NGINX_AUTH_RATE=${NGINX_AUTH_RATE}
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+    networks:
+      - billing_network
+    depends_on:
+      api:
+        condition: service_started
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+
   # --- 1. RELATIONAL DATABASE (SQL SERVER 2022) ---
   sqldb:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -7,14 +30,13 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "${DB_PASSWORD}"
-      MSSQL_PID: "Express" # Change to "Standard" or "Enterprise" if licensed
+      MSSQL_PID: "Express"
     ports:
       - "1433:1433"
     volumes:
       - sqldb_data:/var/opt/mssql
     networks:
       - billing_network
-    # Wait for the DB to be fully operational
     healthcheck:
       test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-U", "sa", "-P", "${DB_PASSWORD}", "-C", "-Q", "SELECT 1"]
       interval: 10s
@@ -58,12 +80,10 @@ services:
 
   # --- 3. DATABASE MIGRATOR (INIT CONTAINER) ---
   migrator:
-    # Requires a Dockerfile in the Migrations project
     build:
       context: .
       dockerfile: src/BillingFlow.Migrations/Dockerfile
     container_name: billingflow_migrator
-    # Does not restart. Runs once, applies migrations, and exits cleanly.
     restart: "no" 
     environment:
       DOTNET_ENVIRONMENT: "${DOTNET_ENVIRONMENT}"
@@ -72,7 +92,7 @@ services:
       - billing_network
     depends_on:
       sqldb:
-        condition: service_healthy # Will not start until SQL Server is ready
+        condition: service_healthy
 
   # --- 4. MAIN API APPLICATION ---
   api:
@@ -91,8 +111,21 @@ services:
       JwtSettings__Audience: "${JWT_AUDIENCE}"
       Stripe__SecretKey: "${STRIPE_SECRET_KEY}"
       Stripe__WebhookSecret: "${STRIPE_WEBHOOK_SECRET}"
-    ports:
-      - "8080:8080"
+
+      # --- RATE LIMITING DYNAMIC OVERRIDES ---
+      RateLimiting__GlobalPermitLimit: "${RATE_LIMIT_GLOBAL_PERMIT_LIMIT}"
+      RateLimiting__GlobalWindowMinutes: "${RATE_LIMIT_GLOBAL_WINDOW_MINUTES}"
+      
+      RateLimiting__PasswordResetPermitLimit: "${RATE_LIMIT_PASSWORD_RESET_PERMIT_LIMIT}"
+      RateLimiting__PasswordResetWindowMinutes: "${RATE_LIMIT_PASSWORD_RESET_WINDOW_MINUTES}"
+      
+      RateLimiting__LoginPermitLimit: "${RATE_LIMIT_LOGIN_PERMIT_LIMIT}"
+      RateLimiting__LoginWindowMinutes: "${RATE_LIMIT_LOGIN_WINDOW_MINUTES}"
+      
+      RateLimiting__EmailVerificationPermitLimit: "${RATE_LIMIT_EMAIL_VERIFICATION_PERMIT_LIMIT}"
+      RateLimiting__EmailVerificationWindowMinutes: "${RATE_LIMIT_EMAIL_VERIFICATION_WINDOW_MINUTES}"
+    expose:
+      - "8080" 
     networks:
       - billing_network
     depends_on:
@@ -101,7 +134,7 @@ services:
       redis:
         condition: service_healthy
       migrator:
-        condition: service_completed_successfully # Critical: API waits for DB schema to be ready
+        condition: service_completed_successfully
     deploy:
       resources:
         limits:
@@ -117,7 +150,7 @@ services:
     image: stripe/stripe-cli:latest
     container_name: billingflow_stripe_cli
     restart: unless-stopped
-    command: "listen --api-key ${STRIPE_SECRET_KEY} --forward-to http://api:8080/api/webhooks/stripe --latest"
+    command: "listen --api-key ${STRIPE_SECRET_KEY} --forward-to http://nginx:80/api/webhooks/stripe --latest"
     networks:
       - billing_network
     depends_on:
@@ -132,6 +165,10 @@ volumes:
   sqldb_data:
   redis_data:
 
+# Deterministic Bridge Subnet matching ASP.NET KnownIPNetworks local profile
 networks:
   billing_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

@@ -1,0 +1,69 @@
+worker_processes auto;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    # --- 1. CLOUD LOAD BALANCER CONFIGURATION (CRITICAL) ---
+    # Azure Load Balancer forwards the real client IP in the X-Forwarded-For header.
+    # We must instruct NGINX to trust the private internal cloud networks 
+    # and replace its internal $remote_addr variable with the true client IP.
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+
+    # --- 2. RATE LIMITING ZONES ---
+    # Because of the real_ip configuration above, $binary_remote_addr now correctly 
+    # tracks the actual user's IP, NOT the Azure Load Balancer's IP.
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=${NGINX_API_RATE};
+    limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=${NGINX_AUTH_RATE};
+
+    server_tokens off;
+
+    upstream api_backend {
+        server api:8080;
+    }
+
+    server {
+        # Azure App Service routes external traffic to the container on port 80.
+        # TLS termination is handled securely outside this container by Azure Edge.
+        listen 80;
+        
+        # No specific server_name needed, Azure routes the assigned domain traffic here.
+
+        # --- 3. GLOBAL API PROXYING & LIMITING ---
+        location / {
+            limit_req zone=api_limit burst=20 nodelay;
+            
+            proxy_pass http://api_backend;
+            
+            proxy_set_header Host $host;
+            
+            # Forward the resolved Real IP and the Protocol (HTTPS) sent by Azure
+            # so that ASP.NET Core downstream processes them correctly.
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+            
+            # SignalR Protocol Support
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+        }
+
+        # --- 4. TIGHTENED SECURITY FOR IDENTITY ENDPOINTS ---
+        location /api/auth/ {
+            limit_req zone=auth_limit burst=5 nodelay;
+            
+            proxy_pass http://api_backend;
+            
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        }
+    }
+}
