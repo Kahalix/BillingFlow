@@ -4,27 +4,31 @@
 ![C# 12](https://img.shields.io/badge/C%23-12.0-239120?style=for-the-badge&logo=c-sharp&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-2022-CC292B?style=for-the-badge&logo=microsoft-sql-server&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7.0-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![NGINX](https://img.shields.io/badge/NGINX-Reverse_Proxy-009639?style=for-the-badge&logo=nginx&logoColor=white)
 ![Stripe](https://img.shields.io/badge/Stripe-Integration-008CDD?style=for-the-badge&logo=stripe&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![CI/CD](https://img.shields.io/badge/GitHub-Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-> **BillingFlow** is a scalable, event-driven CRM and billing platform built to demonstrate enterprise-grade architecture in a modern .NET 8 ecosystem.  
-> The solution combines **Domain-Driven Design (DDD)**, **Command Query Responsibility Segregation (CQRS)**, **Event-Driven Architecture (EDA)**, **Hangfire**, **SignalR**, and **Stripe** integration.
+> **BillingFlow** is an enterprise-oriented CRM and billing platform built on a modern **.NET 8** stack.  
+> It combines **Domain-Driven Design (DDD)**, **CQRS**, **Event-Driven Architecture (EDA)**, **Transactional Outbox**, **Hangfire**, **SignalR**, **NGINX**, and **Stripe** integration in a clean architecture suitable for production use.
 
 ---
 
 ## 🏗️ Architecture & Core Principles
 
-The solution is structured around **Clean Architecture** with **Vertical Slice** feature organization. Business logic stays in the domain and application layers, while infrastructure details remain isolated.
+BillingFlow follows **Clean Architecture** with **Vertical Slice** feature organization. Business rules live in the domain and application layers, while infrastructure concerns stay isolated.
 
-* **CQRS:** Write operations mutate rich domain aggregates through Entity Framework Core. Read operations use Dapper or raw SQL for fast, purpose-built queries.
-* **DDD:** Aggregates such as `Invoice`, `Payment`, `Client`, `ProvidedService`, and `AppUser` protect invariants internally and emit domain events for downstream reactions.
-* **Idempotency & Concurrency:** Stripe webhook delivery, payment attempts, and token handling are protected with unique constraints, row versions, and carefully designed state transitions.
-* **Authorization:** JWT-based authentication is combined with permissions and policy-based checks. Customer-facing reads use row-level access rules inside handlers.
-* **Auditing:** EF Core interceptors capture JSON deltas for entity changes and correlate them with distributed trace identifiers.
-* **Real-time UX:** SignalR pushes payment updates to the frontend, backed by Redis for horizontal scaling.
-* **Background Processing:** Hangfire handles recurring compliance and maintenance jobs without blocking request flow.
+- **CQRS** - write operations mutate rich domain aggregates through Entity Framework Core; read operations use Dapper or raw SQL for fast, purpose-built queries.
+- **DDD** - aggregates such as `Invoice`, `Payment`, `Client`, `ProvidedService`, and `AppUser` protect invariants and emit domain events.
+- **Transactional Outbox** - domain changes and integration events are persisted within the same database transaction. A background relay worker processes pending messages asynchronously, reducing the risk of lost side effects and improving reliability.
+- **Edge Gateway & Security** - NGINX acts as a reverse proxy for API and SignalR traffic, with forwarded headers restricted to trusted proxy networks.
+- **Rate Limiting** - layered rate limiting combines a global API limiter with endpoint-specific policies for sensitive workflows.
+- **Idempotency & Concurrency** - Stripe webhook delivery, payment attempts, and token handling are protected with unique constraints, row versions, and explicit state transitions.
+- **Authorization** - JWT-based authentication is combined with permissions and policy-based checks. Customer-facing reads use row-level access rules inside handlers.
+- **Auditing** - EF Core interceptors capture JSON deltas for entity changes and correlate them with distributed trace identifiers.
+- **Real-time** - SignalR pushes payment updates to the frontend, backed by Redis for horizontal scaling.
+- **Background Processing** - Hangfire handles recurring compliance and maintenance jobs without blocking request flow.
 
 ---
 
@@ -51,15 +55,18 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 ### Read Models & Infrastructure
 * **ClientBalances** - materialized debt projection updated from payment events.
 * **AuditLogs** - infrastructure-level audit trail with old/new values and request metadata.
+* **OutboxMessages** - persistent integration log for background event dispatching.
 
 ---
 
-## 🚀 Domain Modules Deep Dive
+## 🚀 Domain Modules
 
 ### 🛡️ Identity & Security
 * Secure JWT issuance with refresh-token rotation.
 * Replay-attack detection for reused refresh tokens.
 * Hierarchical role management for admin and back-office users.
+* Global and endpoint-specific rate limiting policies protect API resources and sensitive authentication flows.
+* Account recovery and verification emails are dispatched via the Outbox pattern.
 
 ### 🏢 Client Management
 * Clients move through an explicit lifecycle: `Active`, `Suspended`, and `Archived`.
@@ -78,6 +85,7 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 * Successful payments emit a `PaymentRecordedEvent`, which updates the `ClientBalances` read model using raw SQL UPSERT logic.
 
 ### ⚙️ Background Jobs & Real-Time
+* `ProcessOutboxMessagesJob` relays pending integration events to external providers.
 * `CleanupExpiredTokensJob` removes expired tokens.
 * `CheckOverdueInvoicesJob` marks overdue invoices.
 * `SuspendOverdueClientsJob` enforces compliance rules.
@@ -88,8 +96,9 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 ## 🛠️ Technology Stack
 
 | Category | Technology |
-| :--- | :--- |
+| --- | --- |
 | Platform | .NET 8, C# 12, ASP.NET Core Web API |
+| Reverse Proxy | NGINX |
 | Write Model | Entity Framework Core 8 |
 | Read Model | Dapper, raw SQL, stored procedures |
 | Database | Microsoft SQL Server 2022 |
@@ -108,7 +117,7 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 
 ## 🚦 Getting Started
 
-The environment is containerized. A single command provisions SQL Server, Redis, applies migrations, and starts the API.
+The environment is containerized. A single command provisions NGINX, SQL Server, Redis, applies migrations, and starts the API.
 
 ### 1. Environment Setup
 Copy the template configuration file and fill in the required secrets.
@@ -125,7 +134,7 @@ Make sure `STRIPE_SECRET_KEY` and the other required variables are set correctly
 docker compose up --build
 ```
 
-The stack starts the database, Redis, migrator, API, and Stripe CLI tunnel. Wait for the migrator to finish before running flows that depend on the schema.
+The stack starts the edge gateway (NGINX), database, Redis, migrator, API, and Stripe CLI tunnel. Wait for the migrator to finish before running flows that depend on the schema.
 
 ### 3. Stripe Webhook Configuration
 The local Stripe CLI container prints a webhook signing secret (`whsec_...`).
@@ -133,10 +142,10 @@ The local Stripe CLI container prints a webhook signing secret (`whsec_...`).
 Add that value to `.env` under `STRIPE_WEBHOOK_SECRET`, then restart the API container so the new secret is loaded.
 
 ### 4. Swagger / API Docs
-When the API is running, open the interactive OpenAPI UI:
+When the API is running, open the interactive OpenAPI UI through the NGINX gateway:
 
 ```text
-http://localhost:8080/swagger/index.html
+http://localhost/swagger/index.html
 ```
 
 Paste a raw JWT into Swagger's **Authorize** dialog. The UI injects the `Bearer ` prefix automatically.
@@ -164,9 +173,8 @@ The collection is prepared for:
 
 ## 🔮 Future Roadmap
 
+* Observability improvements (Serilog, correlation IDs, centralized logging).
 * Localization and currency formatting for PDFs and UI.
-* Transactional Outbox for delayed side effects.
-* Expanded global rate limiting using Redis.
 * Back-office SPA and customer portal.
 * Production email provider integration.
 * Additional payment providers alongside Stripe.
