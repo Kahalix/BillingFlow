@@ -3,15 +3,17 @@
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![C# 12](https://img.shields.io/badge/C%23-12.0-239120?style=for-the-badge&logo=c-sharp&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-2022-CC292B?style=for-the-badge&logo=microsoft-sql-server&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-7.0-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7.4-DC382D?style=for-the-badge&logo=redis&logoColor=white)
 ![NGINX](https://img.shields.io/badge/NGINX-Reverse_Proxy-009639?style=for-the-badge&logo=nginx&logoColor=white)
 ![Stripe](https://img.shields.io/badge/Stripe-Integration-008CDD?style=for-the-badge&logo=stripe&logoColor=white)
+![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-Integration-F35426?style=for-the-badge&logo=opentelemetry&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-Observability-F46800?style=for-the-badge&logo=grafana&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![CI/CD](https://img.shields.io/badge/GitHub-Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 > **BillingFlow** is an enterprise-oriented CRM and billing platform built on a modern **.NET 8** stack.  
-> It combines **Domain-Driven Design (DDD)**, **CQRS**, **Event-Driven Architecture (EDA)**, **Transactional Outbox**, **Hangfire**, **SignalR**, **NGINX**, and **Stripe** integration in a clean architecture suitable for production use.
+> It combines **Domain-Driven Design (DDD)**, **CQRS**, **Event-Driven Architecture (EDA)**, **Transactional Outbox**, **Hangfire**, **SignalR**, **NGINX**, and **Stripe** integration within a clean architecture, supported by a centralized observability stack based on OpenTelemetry and the Grafana ecosystem.
 
 ---
 
@@ -27,6 +29,7 @@ BillingFlow follows **Clean Architecture** with **Vertical Slice** feature organ
 - **Idempotency & Concurrency** - Stripe webhook delivery, payment attempts, and token handling are protected with unique constraints, row versions, and explicit state transitions.
 - **Authorization** - JWT-based authentication is combined with permissions and policy-based checks. Customer-facing reads use row-level access rules inside handlers.
 - **Auditing** - EF Core interceptors capture JSON deltas for entity changes and correlate them with distributed trace identifiers.
+- **Observability & Telemetry** - configured with OpenTelemetry and Serilog, with traces, metrics, and structured logs routed through Grafana Alloy to Prometheus, Loki, and Tempo.
 - **Real-time** - SignalR pushes payment updates to the frontend, backed by Redis for horizontal scaling.
 - **Background Processing** - Hangfire handles recurring compliance and maintenance jobs without blocking request flow.
 
@@ -106,6 +109,7 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 | Messaging | MediatR |
 | Background Jobs | Hangfire |
 | Real-Time | SignalR + StackExchange.Redis |
+| Observability | OpenTelemetry, Serilog, Grafana Alloy, Prometheus, Loki, Tempo |
 | External APIs | Stripe.net |
 | PDF Generation | QuestPDF |
 | Validation | FluentValidation |
@@ -117,7 +121,7 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 
 ## 🚦 Getting Started
 
-The environment is containerized. A single command provisions NGINX, SQL Server, Redis, applies migrations, and starts the API.
+The environment is containerized. A single command provisions NGINX, SQL Server, Redis, applies migrations, and starts the API with the full observability stack.
 
 ### 1. Environment Setup
 Copy the template configuration file and fill in the required secrets.
@@ -126,7 +130,7 @@ Copy the template configuration file and fill in the required secrets.
 cp .env.example .env
 ```
 
-Make sure `STRIPE_SECRET_KEY` and the other required variables are set correctly.
+Make sure `STRIPE_SECRET_KEY`, `GRAFANA_ADMIN_PASSWORD` and the other required variables are set correctly.
 
 ### 2. Start the Stack
 
@@ -134,7 +138,7 @@ Make sure `STRIPE_SECRET_KEY` and the other required variables are set correctly
 docker compose up --build
 ```
 
-The stack starts the edge gateway (NGINX), database, Redis, migrator, API, and Stripe CLI tunnel. Wait for the migrator to finish before running flows that depend on the schema.
+The stack starts the edge gateway (NGINX), database, Redis, telemetry stack, migrator, API, and Stripe CLI tunnel. Wait for the migrator to finish before running flows that depend on the schema.
 
 ### 3. Stripe Webhook Configuration
 The local Stripe CLI container prints a webhook signing secret (`whsec_...`).
@@ -150,7 +154,23 @@ http://localhost/swagger/index.html
 
 Paste a raw JWT into Swagger's **Authorize** dialog. The UI injects the `Bearer ` prefix automatically.
 
-### 5. Postman
+### 5. Observability Dashboards (Grafana)
+Navigate to the local Grafana instance to monitor Logs, Metrics, and Traces:
+
+```text
+http://localhost:3000
+```
+
+* Username: admin
+* Password: Value of `GRAFANA_ADMIN_PASSWORD` from your `.env` file.
+
+Use the Explore tab to:
+* query structured logs in Loki `({service_name="BillingFlow.Api"} | json)`,
+* visualize distributed traces in Tempo,
+* correlate traces and logs using `TraceId`, 
+* monitor performance metrics in Prometheus.
+
+### 6. Postman
 Import the provided [Postman collection](./docs/BillingFlow.postman_collection.json) to exercise end-to-end flows.
 
 The collection is prepared for:
@@ -173,7 +193,6 @@ The collection is prepared for:
 
 ## 🔮 Future Roadmap
 
-* Observability improvements (Serilog, correlation IDs, centralized logging).
 * Localization and currency formatting for PDFs and UI.
 * Back-office SPA and customer portal.
 * Production email provider integration.
