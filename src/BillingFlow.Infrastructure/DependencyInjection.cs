@@ -43,7 +43,7 @@ public static class DependencyInjection
             var auditInterceptor = sp.GetRequiredService<AuditInterceptor>();
 
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-                   // ORDER IS CRITICAL: 
+                   // Interceptor order matters:
                    // 1. Dispatch domain events (which might trigger MediatR handlers that mutate DbContext further).
                    // 2. Audit the FINAL state of the ChangeTracker.
                    .AddInterceptors(auditInterceptor, domainEventsInterceptor);
@@ -90,7 +90,7 @@ public static class DependencyInjection
 
         // Stripe
 
-        // Ustawienie global key
+        // Global key
         StripeConfiguration.ApiKey = configuration["Stripe:SecretKey"];
 
 
@@ -126,7 +126,6 @@ public static class DependencyInjection
 
         // 4. Transactional Outbox Pattern
 
-        // CRITICAL: Registered as Scoped. 
         // We want IIntegrationEventPublisher to share the exact same Scoped BillingDbContext instance 
         // as the rest of the HTTP request transaction. This guarantees that SaveChangesAsync 
         // commits the outbox message atomically alongside domain changes.

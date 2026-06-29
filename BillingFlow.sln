@@ -40,6 +40,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nginx", "nginx", "{68025048
 		nginx\nginx.conf.template = nginx\nginx.conf.template
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "observability", "observability", "{49328FD4-C41B-4678-8092-203F5E02F7F4}"
+	ProjectSection(SolutionItems) = preProject
+		observability\config.alloy = observability\config.alloy
+		observability\grafana-datasources.yaml = observability\grafana-datasources.yaml
+		observability\loki-config.yaml = observability\loki-config.yaml
+		observability\prometheus-config.yaml = observability\prometheus-config.yaml
+		observability\tempo-config.yaml = observability\tempo-config.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

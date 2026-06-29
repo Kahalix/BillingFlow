@@ -1,0 +1,114 @@
+// ============================================================================
+// 1. LOGS PIPELINE (Docker Standard Streams Engine)
+// ============================================================================
+
+discovery.docker "local_containers" {
+    host = "unix:///var/run/docker.sock"
+    refresh_interval = "5s"
+    
+    // Filter out external containers at the Docker API level
+    // Alloy will only discover containers belonging to the 'billingflow' project
+    filter {
+        name   = "label"
+        values = ["com.docker.compose.project=billingflow"]
+    }
+}
+
+// Map the container name from the infrastructure as a static label
+discovery.relabel "docker_containers" {
+    targets = discovery.docker.local_containers.targets
+
+    rule {
+        source_labels = ["__meta_docker_container_name"]
+        regex         = "/?(.*)"
+        target_label  = "container"
+    }
+}
+
+loki.source.docker "docker_logs" {
+    host       = "unix:///var/run/docker.sock"
+    targets    = discovery.relabel.docker_containers.output
+    forward_to = [loki.process.parse_json.receiver]
+    
+    // Fallback label
+    // Ensures that no log (even malformed ones or from NGINX) triggers a 400 Bad Request error in Loki
+    labels = {
+        "source" = "docker",
+    }
+}
+
+loki.process "parse_json" {
+    forward_to = [loki.write.local_loki.receiver]
+
+    stage.docker {}
+
+    // Extract key data, assuming the log is a valid JSON from Serilog
+    stage.json {
+        expressions = {
+            app     = "Application",
+            level   = "\"@l\"",
+            traceId = "TraceId",
+            userId  = "UserId",
+        }
+    }
+
+    // Promote 'app' and 'level' fields to fast indexes (Labels)
+    // If JSON parsing fails (e.g., raw database logs), these labels will simply be empty,
+    // but the log will still be safely ingested using the "container" and "source" labels
+    stage.labels {
+        values = {
+            app   = "",
+            level = "",
+        }
+    }
+
+    // High-cardinality data goes strictly to structured metadata, preserving Loki's index performance
+    stage.structured_metadata {
+        values = {
+            trace_id = "traceId",
+            user_id  = "userId",
+        }
+    }
+}
+
+loki.write "local_loki" {
+    endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+    }
+}
+
+// ============================================================================
+// 2. OPEN TELEMETRY INGESTION PIPELINE (Unified OTLP Receiver)
+// ============================================================================
+
+otelcol.receiver.otlp "default" {
+    grpc {
+        endpoint = "0.0.0.0:4317"
+    }
+    http {
+        endpoint = "0.0.0.0:4318"
+    }
+    output {
+        metrics = [otelcol.exporter.prometheus.local_prometheus.input]
+        traces  = [otelcol.exporter.otlp.local_tempo.input]
+    }
+}
+
+otelcol.exporter.prometheus "local_prometheus" {
+    forward_to = [prometheus.remote_write.local_prometheus.receiver]
+}
+
+prometheus.remote_write "local_prometheus" {
+    endpoint {
+        url = "http://prometheus:9090/api/v1/write"
+    }
+}
+
+otelcol.exporter.otlp "local_tempo" {
+    client {
+        endpoint = "tempo:4317"
+        tls {
+            insecure = true
+        }
+    }
+}

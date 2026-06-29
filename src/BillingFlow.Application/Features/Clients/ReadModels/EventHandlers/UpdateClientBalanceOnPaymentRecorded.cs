@@ -41,6 +41,7 @@ public class UpdateClientBalanceOnPaymentRecorded(
         // 2. BEST-EFFORT NOTIFICATION: Synchronous push to the client.
         // Wrapped in a try-catch to ensure transient network failures in SignalR/Redis
         // do NOT cause a transaction rollback in the database.
+        // TODO OUTBOX
         try
         {
             await notificationService.NotifyPaymentRecordedAsync(

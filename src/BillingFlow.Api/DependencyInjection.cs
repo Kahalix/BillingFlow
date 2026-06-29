@@ -10,6 +10,10 @@ using Microsoft.OpenApi.Models;
 
 using StackExchange.Redis;
 
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
@@ -45,7 +49,6 @@ public static class DependencyInjection
                 {
                     if (IPAddress.TryParse(net.Ip, out var ipAddress))
                     {
-                        // Using KnownNetworks (For .NET 10 use KnownIPNetworks)
                         options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(ipAddress, net.Prefix));
                     }
                 }
@@ -114,7 +117,7 @@ public static class DependencyInjection
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
 
-        // DEFENSIVE MULTI-LAYERED RATE LIMITING
+        // Rate limiting
         services.AddRateLimiter(options =>
         {
             // Dynamically fetch configuration values
@@ -200,6 +203,28 @@ public static class DependencyInjection
 
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
+
+        // 6. OPEN TELEMETRY (Metrics & Distributed Tracing)
+        var otlpEndpoint = configuration["Otlp:Endpoint"]
+            ?? throw new InvalidOperationException("OTLP Target Collector Endpoint is missing from configuration.");
+
+        services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService("BillingFlow.Api"))
+            .WithMetrics(metrics => metrics
+                .AddAspNetCoreInstrumentation() // Core HTTP Server Metrics
+                .AddHttpClientInstrumentation() // Outbound HTTP Client Metrics
+                .AddRuntimeInstrumentation()    // System Core Metrics (CPU, Memory, GC)
+                .AddOtlpExporter(opts => opts.Endpoint = new Uri(otlpEndpoint))) // Pushing Metrics safely via stable OTLP
+            .WithTracing(tracing => tracing
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddSqlClientInstrumentation(options =>
+                {
+                    // Tracks EF Core and Dapper since both use SqlClient internally
+                    // db.query.text is emitted automatically by semantic conventions
+                    options.RecordException = true; // Records SQL exceptions as trace events
+                })
+                .AddOtlpExporter(opts => opts.Endpoint = new Uri(otlpEndpoint))); // Pushing Traces safely via stable OTLP
 
         return services;
     }
