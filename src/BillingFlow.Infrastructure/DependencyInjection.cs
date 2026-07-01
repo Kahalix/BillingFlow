@@ -33,7 +33,7 @@ public static class DependencyInjection
     {
         // 1. Database & Interceptors
 
-        // Register the interceptor so its dependencies (IPublisher) are resolved by DI
+        // Register the interceptor so its dependencies (IPublisher, IPostCommitActionQueue) are resolved by DI
         services.AddScoped<DispatchDomainEventsInterceptor>();
         services.AddScoped<AuditInterceptor>();
 
@@ -76,7 +76,6 @@ public static class DependencyInjection
         // 2. Register Services
         services.AddSingleton<IInvoicePdfRenderer, QuestPdfInvoiceRenderer>();
 
-
         // Use ConsoleEmailSender for local development. 
         // For production, a real implementation (e.g., SendGrid/SMTP) should be registered.
         if (environment.IsDevelopment())
@@ -92,7 +91,6 @@ public static class DependencyInjection
 
         // Global key
         StripeConfiguration.ApiKey = configuration["Stripe:SecretKey"];
-
 
         // 1. Register Stripe SessionService
         services.AddTransient<SessionService>();
@@ -123,8 +121,10 @@ public static class DependencyInjection
         // Register our custom abstraction to decouple the Application layer from Hangfire
         services.AddTransient<BillingFlow.Application.Interfaces.IBackgroundJobClient, HangfireService>();
 
+        // 4. Transactional Outbox & Post-Commit Patterns
 
-        // 4. Transactional Outbox Pattern
+        // Post-Commit Action Queue (Scoped to current HTTP Request) for UI/UX best-effort notifications (SignalR)
+        services.AddScoped<IPostCommitActionQueue, PostCommitActionQueue>();
 
         // We want IIntegrationEventPublisher to share the exact same Scoped BillingDbContext instance 
         // as the rest of the HTTP request transaction. This guarantees that SaveChangesAsync 

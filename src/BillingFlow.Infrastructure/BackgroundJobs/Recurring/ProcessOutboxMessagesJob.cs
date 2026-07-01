@@ -38,13 +38,18 @@ public class ProcessOutboxMessagesJob(
         // UPDLOCK: Acquires an update lock on the rows.
         // READPAST: Skips rows locked by other worker instances, eliminating deadlocks during horizontal scaling.
         var claimSql = @"
-            UPDATE TOP (50) OutboxMessages WITH (UPDLOCK, READPAST)
+            WITH PendingMessages AS (
+                SELECT TOP (50) *
+                FROM OutboxMessages WITH (UPDLOCK, READPAST)
+                WHERE Status = 0 /* Pending */
+                  AND (LockedUntil IS NULL OR LockedUntil < @Now)
+                  AND (NextAttemptAt IS NULL OR NextAttemptAt <= @Now)
+                ORDER BY OccurredOn ASC
+            )
+            UPDATE PendingMessages
             SET LockedUntil = @LockedUntil,
                 AttemptCount = AttemptCount + 1
-            OUTPUT inserted.*
-            WHERE Status = 0 /* Pending */
-              AND (LockedUntil IS NULL OR LockedUntil < @Now)
-              AND (NextAttemptAt IS NULL OR NextAttemptAt <= @Now)";
+            OUTPUT inserted.*;";
 
         using var connection = connectionFactory.CreateConnection();
 
@@ -59,9 +64,8 @@ public class ProcessOutboxMessagesJob(
         {
             try
             {
-                // Delegates the physical network transmission to the transport dispatcher
-                await dispatcher.DispatchAsync(message.Type, message.Payload, cancellationToken);
-
+                // Passing message.Id for At-Least-Once deduplication downstream
+                await dispatcher.DispatchAsync(message.Id, message.Type, message.Payload, cancellationToken);
                 message.MarkAsProcessed(timeProvider.GetUtcNow());
             }
             catch (Exception ex)

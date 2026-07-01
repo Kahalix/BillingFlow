@@ -27,6 +27,7 @@ public class BillingDbContext(
     public DbSet<StripeEventLog> StripeEventLogs => Set<StripeEventLog>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<IntegrationDispatchLog> IntegrationDispatchLogs => Set<IntegrationDispatchLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

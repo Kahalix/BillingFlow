@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using BillingFlow.Application.Features.Clients.IntegrationEvents;
 using BillingFlow.Application.Features.Identity.IntegrationEvents;
+using BillingFlow.Application.Features.Invoices.IntegrationEvents;
 using BillingFlow.Application.Interfaces;
 
 namespace BillingFlow.Infrastructure.Outbox;
@@ -14,7 +15,7 @@ namespace BillingFlow.Infrastructure.Outbox;
 /// </summary>
 public class HangfireIntegrationEventDispatcher(IBackgroundJobClient hangfireClient) : IIntegrationEventDispatcher
 {
-    public Task DispatchAsync(string eventType, string payload, CancellationToken cancellationToken)
+    public Task DispatchAsync(Guid outboxMessageId, string eventType, string payload, CancellationToken cancellationToken)
     {
         switch (eventType)
         {
@@ -24,7 +25,7 @@ public class HangfireIntegrationEventDispatcher(IBackgroundJobClient hangfireCli
                 {
                     // Securely offloads the email transmission to a Hangfire worker
                     hangfireClient.Enqueue<IEmailSender>(sender =>
-                        sender.SendClientSuspensionNoticeAsync(data.Email, data.CompanyName, CancellationToken.None));
+                        sender.SendClientSuspensionNoticeAsync(outboxMessageId, data.Email, data.CompanyName, CancellationToken.None));
                 }
                 break;
 
@@ -33,7 +34,7 @@ public class HangfireIntegrationEventDispatcher(IBackgroundJobClient hangfireCli
                 if (securityData != null)
                 {
                     hangfireClient.Enqueue<IEmailSender>(sender =>
-                        sender.SendEmailChangedNoticeAsync(securityData.OldEmail, CancellationToken.None));
+                        sender.SendEmailChangedNoticeAsync(outboxMessageId, securityData.OldEmail, CancellationToken.None));
                 }
                 break;
 
@@ -42,7 +43,7 @@ public class HangfireIntegrationEventDispatcher(IBackgroundJobClient hangfireCli
                 if (resetData != null)
                 {
                     hangfireClient.Enqueue<IEmailSender>(sender =>
-                        sender.SendPasswordResetEmailAsync(resetData.Email, resetData.RawToken, CancellationToken.None));
+                        sender.SendPasswordResetEmailAsync(outboxMessageId, resetData.Email, resetData.RawToken, CancellationToken.None));
                 }
                 break;
 
@@ -51,7 +52,22 @@ public class HangfireIntegrationEventDispatcher(IBackgroundJobClient hangfireCli
                 if (confirmData != null)
                 {
                     hangfireClient.Enqueue<IEmailSender>(sender =>
-                        sender.SendEmailChangeConfirmationAsync(confirmData.NewEmail, confirmData.RawToken, CancellationToken.None));
+                        sender.SendEmailChangeConfirmationAsync(outboxMessageId, confirmData.NewEmail, confirmData.RawToken, CancellationToken.None));
+                }
+                break;
+
+            case nameof(SendInvoiceOverdueNoticeEvent):
+                var overdueData = JsonSerializer.Deserialize<SendInvoiceOverdueNoticeEvent>(payload);
+                if (overdueData != null)
+                {
+                    hangfireClient.Enqueue<IEmailSender>(sender =>
+                        sender.SendInvoiceOverdueNoticeAsync(
+                            outboxMessageId,
+                            overdueData.Email,
+                            overdueData.CompanyName,
+                            overdueData.InvoiceNumber,
+                            overdueData.AmountDue,
+                            CancellationToken.None));
                 }
                 break;
 

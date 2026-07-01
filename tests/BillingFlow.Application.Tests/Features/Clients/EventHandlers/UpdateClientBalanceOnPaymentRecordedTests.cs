@@ -18,6 +18,7 @@ public class UpdateClientBalanceOnPaymentRecordedTests
 {
     private readonly Mock<IClientBalanceProjectionWriter> _projectionWriterMock;
     private readonly Mock<IClientNotificationService> _notificationServiceMock;
+    private readonly Mock<IPostCommitActionQueue> _postCommitQueueMock;
     private readonly UpdateClientBalanceOnPaymentRecorded _handler;
 
     public UpdateClientBalanceOnPaymentRecordedTests()
@@ -26,47 +27,60 @@ public class UpdateClientBalanceOnPaymentRecordedTests
         // preventing hidden side-effects in the handler.
         _projectionWriterMock = new Mock<IClientBalanceProjectionWriter>(MockBehavior.Strict);
         _notificationServiceMock = new Mock<IClientNotificationService>(MockBehavior.Strict);
+        _postCommitQueueMock = new Mock<IPostCommitActionQueue>(MockBehavior.Strict);
 
         _handler = new UpdateClientBalanceOnPaymentRecorded(
             _projectionWriterMock.Object,
             _notificationServiceMock.Object,
+            _postCommitQueueMock.Object,
             TimeProvider.System,
             NullLogger<UpdateClientBalanceOnPaymentRecorded>.Instance);
     }
 
     [Fact]
-    public async Task Handle_ShouldApplyNegativeDeltaBeforePushingNotification()
+    public async Task Handle_ShouldApplyNegativeDeltaAndEnqueueNotification()
     {
         // Arrange
         var invoiceId = Guid.NewGuid();
         var clientId = Guid.NewGuid();
         var amount = 150.00m;
 
-        // Corrected parameter order: PaymentId, InvoiceId, ClientId, Amount
+        // PaymentRecordedEvent requires: PaymentId, InvoiceId, ClientId and Amount.
         var notification = new PaymentRecordedEvent(Guid.NewGuid(), invoiceId, clientId, amount);
 
-        // Strict sequence validation. 
-        // Ensures database projections happen FIRST, and SignalR notifications happen SECOND.
-        var sequence = new MockSequence();
-
-        _projectionWriterMock.InSequence(sequence)
+        // Setup the database call to succeed
+        _projectionWriterMock
             .Setup(p => p.ApplyDebtDeltaAsync(clientId, -amount, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        _notificationServiceMock.InSequence(sequence)
-            .Setup(n => n.NotifyPaymentRecordedAsync(clientId, invoiceId, amount))
-            .Returns(Task.CompletedTask);
+        // Capture the exact lambda passed to the post-commit queue
+        Func<CancellationToken, Task>? capturedAction = null;
+        _postCommitQueueMock
+            .Setup(q => q.Enqueue(It.IsAny<Func<CancellationToken, Task>>()))
+            .Callback<Func<CancellationToken, Task>>(action => capturedAction = action);
 
         // Act
         await _handler.Handle(notification, CancellationToken.None);
 
-        // Assert - VerifyAll ensures all strict setups in the sequence were executed exactly as defined
+        // Assert
+        Assert.NotNull(capturedAction);
+
+        // Configure the notification service before executing the buffered action.
+        _notificationServiceMock
+            .Setup(n => n.NotifyPaymentRecordedAsync(clientId, invoiceId, amount))
+            .Returns(Task.CompletedTask);
+
+        // Invoke the lambda that was placed in the queue
+        await capturedAction!(CancellationToken.None);
+
+        // Verify that the projection was applied and the notification callback was buffered.
         _projectionWriterMock.VerifyAll();
+        _postCommitQueueMock.VerifyAll();
         _notificationServiceMock.VerifyAll();
     }
 
     [Fact]
-    public async Task Handle_WhenSignalRFails_ShouldSwallowExceptionToPreventTransactionRollback()
+    public async Task Handle_DelegatesNotificationToPostCommitQueue_PreventingTransactionBlocking()
     {
         // Arrange
         var invoiceId = Guid.NewGuid();
@@ -79,21 +93,23 @@ public class UpdateClientBalanceOnPaymentRecordedTests
             .Setup(p => p.ApplyDebtDeltaAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        // Simulate a transient network failure in the SignalR infrastructure
-        _notificationServiceMock
-            .Setup(n => n.NotifyPaymentRecordedAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<decimal>()))
-            .ThrowsAsync(new Exception("SignalR connection refused or timed out"));
+        // Setup the queue to just accept the action
+        _postCommitQueueMock
+            .Setup(q => q.Enqueue(It.IsAny<Func<CancellationToken, Task>>()));
 
         // Act
-        // We record the exception rather than letting it bubble up
-        var exception = await Record.ExceptionAsync(() => _handler.Handle(notification, CancellationToken.None));
+        await _handler.Handle(notification, CancellationToken.None);
 
         // Assert
-        // CRITICAL ARCHITECTURAL GUARANTEE: An operational failure (notification) MUST NOT 
-        // bubble up and trigger a database transaction rollback for the financial data.
-        Assert.Null(exception);
+        // The handler should enqueue the notification instead of invoking it directly.
+        // A direct call would fail because IClientNotificationService is a Strict mock
+        // without any configured expectations.
+        _projectionWriterMock.VerifyAll();
+        _postCommitQueueMock.VerifyAll();
 
-        _projectionWriterMock.Verify(p =>
-            p.ApplyDebtDeltaAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Once);
+        // Verify that the handler does not invoke the notification service directly.
+        _notificationServiceMock.Verify(
+            x => x.NotifyPaymentRecordedAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<decimal>()),
+            Times.Never);
     }
 }

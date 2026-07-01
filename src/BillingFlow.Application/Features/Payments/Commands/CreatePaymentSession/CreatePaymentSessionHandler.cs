@@ -110,7 +110,7 @@ public class CreatePaymentSessionHandler(
             // Do not wrap or fail the reservation if the client simply disconnected.
             throw;
         }
-        catch (ExternalServiceException ex) // <-- CLEAN ARCHITECTURE: Catching agnostic exception!
+        catch (ExternalServiceException ex)
         {
             // SECURE LOGGING: Write raw, potentially sensitive API errors to internal logs only
             logger.LogError(ex, "Payment gateway integration failed for Invoice {InvoiceId}. Transient: {IsTransient}. Reason: {Message}",

@@ -13,11 +13,13 @@ namespace BillingFlow.Application.Features.Clients.ReadModels.EventHandlers;
 
 /// <summary>
 /// Handles the financial impact of a recorded payment.
-/// Updates the read model projection and dispatches a synchronous best-effort notification.
+/// Updates the read model projection and explicitly buffers a real-time notification 
+/// to be executed ONLY after the database transaction successfully commits.
 /// </summary>
 public class UpdateClientBalanceOnPaymentRecorded(
     IClientBalanceProjectionWriter projectionWriter,
     IClientNotificationService notificationService,
+    IPostCommitActionQueue postCommitQueue,
     TimeProvider timeProvider,
     ILogger<UpdateClientBalanceOnPaymentRecorded> logger) : INotificationHandler<PaymentRecordedEvent>
 {
@@ -38,23 +40,13 @@ public class UpdateClientBalanceOnPaymentRecorded(
             notification.ClientId,
             notification.Amount);
 
-        // 2. BEST-EFFORT NOTIFICATION: Synchronous push to the client.
-        // Wrapped in a try-catch to ensure transient network failures in SignalR/Redis
-        // do NOT cause a transaction rollback in the database.
-        // TODO OUTBOX
-        try
-        {
-            await notificationService.NotifyPaymentRecordedAsync(
+        // 2. BUFFER UX NOTIFICATION (POST-COMMIT PATTERN)
+        // Instead of calling SignalR here (which could block the active SQL transaction),
+        // we enqueue it. It will be flushed and executed ONLY if SaveChangesAsync succeeds.
+        postCommitQueue.Enqueue(ct =>
+            notificationService.NotifyPaymentRecordedAsync(
                 notification.ClientId,
                 notification.InvoiceId,
-                notification.Amount);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Failed to push real-time notification for Payment to Client {ClientId}. The financial data was projected correctly.",
-                notification.ClientId);
-        }
+                notification.Amount));
     }
 }

@@ -5,7 +5,7 @@ namespace BillingFlow.Application.Interfaces;
 
 /// <summary>
 /// Defines the contract for pushing real-time notifications to connected clients.
-/// /// Designed for background execution (e.g., Hangfire), hence no CancellationToken is required in the signature.
+/// /// Designed for background execution, hence no CancellationToken is required in the signature.
 /// </summary>
 public interface IClientNotificationService
 {

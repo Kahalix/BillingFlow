@@ -77,11 +77,19 @@ public class AddForeignKeys : Migration
             .FromTable("Payments").ForeignColumn("ReceivedByUserId")
             .ToTable("Users").PrimaryColumn("Id")
             .OnDelete(System.Data.Rule.SetNull);
+
+        // 12. IntegrationDispatchLogs -> OutboxMessages
+        // Strict relational integrity. Prevents orphaned deduplication logs if the source message is somehow removed.
+        Create.ForeignKey("FK_IntegrationDispatchLogs_OutboxMessages_OutboxMessageId")
+            .FromTable("IntegrationDispatchLogs").ForeignColumn("OutboxMessageId")
+            .ToTable("OutboxMessages").PrimaryColumn("Id")
+            .OnDelete(System.Data.Rule.None);
     }
 
     public override void Down()
     {
         // Explicitly drop constraints in reverse order
+        Delete.ForeignKey("FK_IntegrationDispatchLogs_OutboxMessages_OutboxMessageId").OnTable("IntegrationDispatchLogs");
         Delete.ForeignKey("FK_Payments_Users_ReceivedByUserId").OnTable("Payments");
         Delete.ForeignKey("FK_Payments_PaymentAttempts_PaymentAttemptId").OnTable("Payments");
         Delete.ForeignKey("FK_Payments_Invoices_InvoiceId").OnTable("Payments");

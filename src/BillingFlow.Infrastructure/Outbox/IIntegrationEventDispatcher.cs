@@ -8,5 +8,5 @@ namespace BillingFlow.Infrastructure.Outbox;
 /// </summary>
 public interface IIntegrationEventDispatcher
 {
-    Task DispatchAsync(string eventType, string payload, CancellationToken cancellationToken);
+    Task DispatchAsync(Guid outboxMessageId, string eventType, string payload, CancellationToken cancellationToken);
 }

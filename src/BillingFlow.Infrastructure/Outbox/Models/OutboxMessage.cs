@@ -65,8 +65,8 @@ public class OutboxMessage
         }
         else
         {
-            // Exponential backoff: Base delay increases quadratically based on attempt count
-            NextAttemptAt = now.AddMinutes(Math.Pow(AttemptCount, 2));
+            // Exponential backoff (2^0 = 1m, 2^1 = 2m, 2^2 = 4m, 2^3 = 8m, etc.)
+            NextAttemptAt = now.AddMinutes(Math.Pow(2, AttemptCount - 1));
         }
     }
 }

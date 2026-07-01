@@ -5,9 +5,9 @@ namespace BillingFlow.Application.Interfaces;
 /// </summary>
 public interface IEmailSender
 {
-    Task SendPasswordResetEmailAsync(string toEmail, string resetToken, CancellationToken cancellationToken = default);
-    Task SendEmailChangeConfirmationAsync(string newEmail, string confirmationToken, CancellationToken cancellationToken = default);
-    Task SendEmailChangedNoticeAsync(string oldEmail, CancellationToken cancellationToken = default);
-    Task SendClientSuspensionNoticeAsync(string toEmail, string companyName, CancellationToken cancellationToken = default);
-    Task SendInvoiceOverdueNoticeAsync(string toEmail, string companyName, string invoiceNumber, decimal amountDue, CancellationToken cancellationToken = default);
+    Task SendPasswordResetEmailAsync(Guid outboxMessageId, string toEmail, string resetToken, CancellationToken cancellationToken = default);
+    Task SendEmailChangeConfirmationAsync(Guid outboxMessageId, string newEmail, string confirmationToken, CancellationToken cancellationToken = default);
+    Task SendEmailChangedNoticeAsync(Guid outboxMessageId, string oldEmail, CancellationToken cancellationToken = default);
+    Task SendClientSuspensionNoticeAsync(Guid outboxMessageId, string toEmail, string companyName, CancellationToken cancellationToken = default);
+    Task SendInvoiceOverdueNoticeAsync(Guid outboxMessageId, string toEmail, string companyName, string invoiceNumber, decimal amountDue, CancellationToken cancellationToken = default);
 }
