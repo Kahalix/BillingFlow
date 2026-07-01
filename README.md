@@ -13,7 +13,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 > **BillingFlow** is an enterprise-oriented CRM and billing platform built on a modern **.NET 8** stack.  
-> It combines **Domain-Driven Design (DDD)**, **CQRS**, **Event-Driven Architecture (EDA)**, **Transactional Outbox**, **Hangfire**, **SignalR**, **NGINX**, and **Stripe** integration within a clean architecture, supported by a centralized observability stack based on OpenTelemetry and the Grafana ecosystem.
+> It combines **Domain-Driven Design (DDD)**, **CQRS**, **Event-Driven Architecture (EDA)**, **Transactional Outbox**, **Hangfire**, **SignalR**, **NGINX**, and **Stripe** integration within a clean architecture, supported by a reliable, idempotent event dispatch flow and a centralized observability stack based on OpenTelemetry and the Grafana ecosystem.
 
 ---
 
@@ -23,7 +23,8 @@ BillingFlow follows **Clean Architecture** with **Vertical Slice** feature organ
 
 - **CQRS** - write operations mutate rich domain aggregates through Entity Framework Core; read operations use Dapper or raw SQL for fast, purpose-built queries.
 - **DDD** - aggregates such as `Invoice`, `Payment`, `Client`, `ProvidedService`, and `AppUser` protect invariants and emit domain events.
-- **Transactional Outbox** - domain changes and integration events are persisted within the same database transaction. A background relay worker processes pending messages asynchronously, reducing the risk of lost side effects and improving reliability.
+- **Transactional Outbox & Idempotency** - domain changes and integration events are persisted within the same database transaction, reducing the risk of lost side effects. A concurrent-safe background relay worker processes pending messages asynchronously, routing them to an idempotent consumer flow that uses lease-based tokens to coordinate dispatch ownership while supporting event fan-out.
+- **Post-Save Notification Queue** - decouples non-critical external I/O from the database transaction boundary. Best-effort real-time notifications (SignalR) are buffered in memory and processed after `SaveChangesAsync` succeeds, helping prevent slow network connections or Redis operations from blocking primary database connections.
 - **Edge Gateway & Security** - NGINX acts as a reverse proxy for API and SignalR traffic, with forwarded headers restricted to trusted proxy networks.
 - **Rate Limiting** - layered rate limiting combines a global API limiter with endpoint-specific policies for sensitive workflows.
 - **Idempotency & Concurrency** - Stripe webhook delivery, payment attempts, and token handling are protected with unique constraints, row versions, and explicit state transitions.
@@ -59,6 +60,7 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 * **ClientBalances** - materialized debt projection updated from payment events.
 * **AuditLogs** - infrastructure-level audit trail with old/new values and request metadata.
 * **OutboxMessages** - persistent integration log for background event dispatching.
+* **IntegrationDispatchLogs** - lease-based state tracking log to prevent duplicate downstream side-effect execution.
 
 ---
 
