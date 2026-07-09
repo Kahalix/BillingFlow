@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using BillingFlow.Application.Features.Identity.IntegrationEvents;
+using BillingFlow.Application.Identity;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
@@ -10,6 +11,7 @@ using BillingFlow.Domain.Enums;
 using MediatR;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BillingFlow.Application.Features.Identity.Commands.RequestPasswordReset;
 
@@ -22,9 +24,12 @@ public class RequestPasswordResetHandler(
     ITokenGenerator tokenGenerator,
     ITokenHashService tokenHashService,
     IIntegrationEventPublisher eventPublisher,
+    IOptions<IdentityOptions> options,
     TimeProvider timeProvider)
     : IRequestHandler<RequestPasswordResetCommand>
 {
+    private readonly IdentityOptions _options = options.Value;
+
     public async Task Handle(RequestPasswordResetCommand request, CancellationToken cancellationToken)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -43,18 +48,15 @@ public class RequestPasswordResetHandler(
         var rawToken = tokenGenerator.GenerateSecureToken();
         var tokenHash = tokenHashService.HashToken(rawToken);
 
-        // 2. Create the domain entity for the token (Valid for 1 hour)
         var now = timeProvider.GetUtcNow();
-        var expiry = now.AddHours(1);
+        var expiry = now.Add(_options.PasswordResetLifetime);
 
-        // Note: Password reset tokens don't need a SessionId, so we can use Guid.Empty
-        var userToken = new UserToken(
+        // 2. Use the dedicated factory method to create the token
+        var userToken = UserToken.CreatePasswordResetToken(
             user.Id,
-            Guid.Empty,
-            UserTokenType.PasswordReset,
             tokenHash,
-            expiry,
-            now);
+            now,
+            expiry);
 
         context.UserTokens.Add(userToken);
 

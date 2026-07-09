@@ -13,10 +13,12 @@ using BillingFlow.Application.Features.Invoices.Queries.DownloadInvoicePdf;
 using BillingFlow.Application.Features.Invoices.Queries.GetInvoiceDetails;
 using BillingFlow.Application.Features.Payments.Commands.CreatePaymentSession;
 using BillingFlow.Application.Features.Payments.Queries.GetPaymentDetails;
+using BillingFlow.Application.Identity;
 
 using FluentValidation;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -50,9 +52,14 @@ public static class DependencyInjection
 
         // 3. Register Specific Authorization Policies
         // (add new policies here as we build the application features)
-        // services.AddScoped<IAuthorizationPolicy<GetInvoiceDetailsQuery>, GetInvoiceDetailsPolicy>();
 
-        // Users
+        // Identity
+        services.AddOptions<IdentityOptions>()
+            .BindConfiguration(IdentityOptions.SectionName)
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<IdentityOptions>, IdentityOptionsValidator>();
+
         services.AddScoped<IAuthorizationPolicy<RegisterUserCommand>, RegisterUserPolicy>();
         services.AddScoped<IAuthorizationPolicy<ActivateUserCommand>, ActivateUserPolicy>();
         services.AddScoped<IAuthorizationPolicy<ChangeUserRoleCommand>, ChangeUserRolePolicy>();

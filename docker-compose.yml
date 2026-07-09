@@ -8,7 +8,14 @@ services:
       - "80:80"
     environment:
       - NGINX_API_RATE=${NGINX_API_RATE}
+      - NGINX_API_BURST=${NGINX_API_BURST}
+      
       - NGINX_AUTH_RATE=${NGINX_AUTH_RATE}
+      - NGINX_AUTH_BURST=${NGINX_AUTH_BURST}
+      
+      - NGINX_HANGFIRE_RATE=${NGINX_HANGFIRE_RATE}
+      - NGINX_HANGFIRE_BURST=${NGINX_HANGFIRE_BURST}
+      
       - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
     volumes:
       - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
@@ -106,11 +113,22 @@ services:
       ASPNETCORE_URLS: "http://+:8080"
       ConnectionStrings__DefaultConnection: "Server=sqldb;Database=${DB_NAME};User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;"
       ConnectionStrings__Redis: "${REDIS_CONNECTION}"
-      JwtSettings__Secret: "${JWT_SECRET}"
-      JwtSettings__Issuer: "${JWT_ISSUER}"
-      JwtSettings__Audience: "${JWT_AUDIENCE}"
+      
+      Jwt__Secret: "${JWT_SECRET}"
+      Jwt__Issuer: "${JWT_ISSUER}"
+      Jwt__Audience: "${JWT_AUDIENCE}"
+      Jwt__AccessTokenLifetimeMinutes: "${JWT_ACCESS_TOKEN_LIFETIME_MINUTES}"
+      
       Stripe__SecretKey: "${STRIPE_SECRET_KEY}"
       Stripe__WebhookSecret: "${STRIPE_WEBHOOK_SECRET}"
+ 
+      SessionCache__ValidationTtl: "${SESSION_CACHE_VALIDATION_TTL}"
+
+      Identity__SessionLifetime: "${IDENTITY_SESSION_LIFETIME}"
+      Identity__AbsoluteSessionLifetime: "${IDENTITY_ABSOLUTE_SESSION_LIFETIME}"
+      Identity__RefreshTokenLifetime: "${IDENTITY_REFRESH_TOKEN_LIFETIME}"
+      Identity__PasswordResetLifetime: "${IDENTITY_PASSWORD_RESET_LIFETIME}"
+      Identity__EmailConfirmationLifetime: "${IDENTITY_EMAIL_CONFIRMATION_LIFETIME}"
 
       # --- RATE LIMITING DYNAMIC OVERRIDES ---
       RateLimiting__GlobalPermitLimit: "${RATE_LIMIT_GLOBAL_PERMIT_LIMIT}"
@@ -121,6 +139,9 @@ services:
       
       RateLimiting__LoginPermitLimit: "${RATE_LIMIT_LOGIN_PERMIT_LIMIT}"
       RateLimiting__LoginWindowMinutes: "${RATE_LIMIT_LOGIN_WINDOW_MINUTES}"
+
+      RateLimiting__DashboardLoginPermitLimit: "${RATE_LIMIT_DASHBOARD_LOGIN_PERMIT_LIMIT}"
+      RateLimiting__DashboardLoginWindowMinutes: "${RATE_LIMIT_DASHBOARD_LOGIN_WINDOW_MINUTES}"
       
       RateLimiting__EmailVerificationPermitLimit: "${RATE_LIMIT_EMAIL_VERIFICATION_PERMIT_LIMIT}"
       RateLimiting__EmailVerificationWindowMinutes: "${RATE_LIMIT_EMAIL_VERIFICATION_WINDOW_MINUTES}"

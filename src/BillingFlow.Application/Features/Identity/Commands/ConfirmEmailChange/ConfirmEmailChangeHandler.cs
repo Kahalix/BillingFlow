@@ -6,6 +6,10 @@ using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace BillingFlow.Application.Features.Identity.Commands.ConfirmEmailChange;
 
 public class ConfirmEmailChangeHandler(
@@ -22,7 +26,9 @@ public class ConfirmEmailChangeHandler(
         var resetToken = await context.UserTokens
             .SingleOrDefaultAsync(t => t.TokenHash == incomingTokenHash && t.Type == UserTokenType.EmailConfirmation, cancellationToken);
 
-        if (resetToken is null || !resetToken.IsActive(timeProvider) || string.IsNullOrWhiteSpace(resetToken.Data))
+        var now = timeProvider.GetUtcNow();
+
+        if (resetToken is null || !resetToken.IsActive(now) || string.IsNullOrWhiteSpace(resetToken.Data))
         {
             throw new DomainException("The email confirmation token is invalid or has expired.");
         }
@@ -42,7 +48,9 @@ public class ConfirmEmailChangeHandler(
 
         // 4. Change the email (This will dispatch the EmailChangedEvent!)
         user.ChangeEmail(newEmail);
-        resetToken.MarkAsConsumed(timeProvider);
+
+        // Używamy wyliczonego 'now'
+        resetToken.MarkAsConsumed(now);
 
         await context.SaveChangesAsync(cancellationToken);
     }

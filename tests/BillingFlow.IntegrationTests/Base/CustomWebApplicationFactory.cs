@@ -28,7 +28,7 @@ using Microsoft.Extensions.Options;
 using Respawn;
 
 using Testcontainers.MsSql;
-
+using Testcontainers.Redis;
 using Xunit;
 
 namespace BillingFlow.IntegrationTests.Base;
@@ -83,15 +83,22 @@ public class TestAuthHandler(
 /// </summary>
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly MsSqlContainer _dbContainer = new MsSqlBuilder().Build();
+    // 1. Declare both containers
+    private readonly MsSqlContainer _dbContainer =
+    new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
+        .Build();
+
+    private readonly RedisContainer _redisContainer =
+    new RedisBuilder("redis:7.4.8-alpine")
+        .Build();
 
     private DbConnection _dbConnection = default!;
     private Respawner _respawner = default!;
 
     public async Task InitializeAsync()
     {
-        // 1. Start the Docker container
-        await _dbContainer.StartAsync();
+        // 2. Start both containers in parallel for faster test startup
+        await Task.WhenAll(_dbContainer.StartAsync(), _redisContainer.StartAsync());
 
         // 2. Open a persistent connection
         _dbConnection = new SqlConnection(_dbContainer.GetConnectionString());
@@ -135,18 +142,25 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public new async Task DisposeAsync()
     {
         await _dbConnection.DisposeAsync();
-        await _dbContainer.DisposeAsync();
+
+        // 3. Clean up both containers after test suite finishes
+        await Task.WhenAll(_dbContainer.DisposeAsync().AsTask(), _redisContainer.DisposeAsync().AsTask());
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Safely override configuration using UseSetting to prevent environment variable leakage
-        builder.UseSetting("ConnectionStrings:DefaultConnection", _dbContainer.GetConnectionString());
-        builder.UseSetting("ConnectionStrings:Redis", "localhost:6379,abortConnect=false,connectTimeout=10");
-        builder.UseSetting("JwtSettings:Secret", "SuperSecretTestKeyThatIsAtLeast32BytesLong!!!");
-        builder.UseSetting("JwtSettings:Issuer", "TestIssuer");
-        builder.UseSetting("JwtSettings:Audience", "TestAudience");
+        // We explicitly test using the Production environment behavior now, 
+        // to ensure strict Fail-Fast rules and real infrastructure routing.
+        builder.UseEnvironment("Production");
 
+        builder.UseSetting("ConnectionStrings:DefaultConnection", _dbContainer.GetConnectionString());
+
+        // Pass the dynamic Testcontainers Redis connection string
+        builder.UseSetting("ConnectionStrings:Redis", _redisContainer.GetConnectionString());
+
+        builder.UseSetting("Jwt:Secret", "SuperSecretTestKeyThatIsAtLeast32BytesLong!!!");
+        builder.UseSetting("Jwt:Issuer", "TestIssuer");
+        builder.UseSetting("Jwt:Audience", "TestAudience");
         builder.UseSetting("Stripe:WebhookSecret", "whsec_integration_test_secret_12345");
 
         builder.ConfigureTestServices(services =>

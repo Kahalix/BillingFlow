@@ -22,7 +22,10 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddPresentation(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         // EDGE REVERSE PROXY CONFIGURATION
         services.Configure<ForwardedHeadersOptions>(options =>
@@ -63,21 +66,33 @@ public static class DependencyInjection
         services.AddControllers();
         services.AddEndpointsApiExplorer();
 
+        // ==============================================================================
         // 1. SIGNALR REGISTRATION
-        // Register the local API implementation for the Hangfire job to resolve
+        // ==============================================================================
+
         services.AddTransient<IClientNotificationService, BillingFlow.Api.Services.SignalRClientNotificationService>();
 
-        // Configure SignalR with Redis Backplane for horizontal scaling
-        var redisConnectionString = configuration.GetConnectionString("Redis")
-            ?? throw new InvalidOperationException("Redis connection string is missing from configuration.");
+        var signalRBuilder = services.AddSignalR();
+        var redisConnectionString = configuration.GetConnectionString("Redis");
 
-        services.AddSignalR()
-            .AddStackExchangeRedis(redisConnectionString, options =>
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            // 1. PRIMARY: Redis Backplane (Production / Docker)
+            signalRBuilder.AddStackExchangeRedis(redisConnectionString, options =>
             {
                 options.Configuration.ChannelPrefix = RedisChannel.Literal("BillingFlow_SignalR_");
             });
+        }
+        else if (!environment.IsDevelopment())
+        {
+            // 2. FAIL-FAST: Production strictly requires Redis for cross-node messaging.
+            throw new InvalidOperationException(
+                "Redis connection string is missing. Redis Backplane is strictly required for SignalR in non-development environments to ensure reliable real-time messaging across scaled instances.");
+        }
 
-        // Swagger Configuration with JWT Bearer Auth
+        // ==============================================================================
+        // 2. SWAGGER CONFIGURATION
+        // ==============================================================================
         services.AddSwaggerGen(options =>
         {
             options.SwaggerDoc("v1", new OpenApiInfo { Title = "BillingFlow API", Version = "v1" });
@@ -103,7 +118,7 @@ public static class DependencyInjection
                         {
                             Type = ReferenceType.SecurityScheme,
                             Id = "Bearer"
-                    },
+                        },
                         Scheme = "oauth2",
                         Name = "Bearer",
                         In = ParameterLocation.Header
@@ -126,6 +141,9 @@ public static class DependencyInjection
 
             var loginLimit = configuration.GetValue<int>("RateLimiting:LoginPermitLimit", 5);
             var loginWindow = configuration.GetValue<int>("RateLimiting:LoginWindowMinutes", 1);
+
+            var dashLoginLimit = configuration.GetValue<int>("RateLimiting:DashboardLoginPermitLimit", 3);
+            var dashLoginWindow = configuration.GetValue<int>("RateLimiting:DashboardLoginWindowMinutes", 1);
 
             var pwdLimit = configuration.GetValue<int>("RateLimiting:PasswordResetPermitLimit", 3);
             var pwdWindow = configuration.GetValue<int>("RateLimiting:PasswordResetWindowMinutes", 15);
@@ -169,6 +187,20 @@ public static class DependencyInjection
                         AutoReplenishment = true,
                         PermitLimit = loginLimit,
                         Window = TimeSpan.FromMinutes(loginWindow),
+                        QueueLimit = 0
+                    });
+            });
+
+            // Dashboard Login Abuse Protection
+            options.AddPolicy("DashboardLoginPolicy", context =>
+            {
+                var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter($"auth_dash_login_ip_{ip}", opt =>
+                    new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = dashLoginLimit,
+                        Window = TimeSpan.FromMinutes(dashLoginWindow),
                         QueueLimit = 0
                     });
             });

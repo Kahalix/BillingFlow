@@ -1,5 +1,9 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 using BillingFlow.Application.Interfaces;
-using BillingFlow.Domain.Enums;
 
 using MediatR;
 
@@ -10,28 +14,34 @@ namespace BillingFlow.Application.Features.Identity.Commands.LogoutAllDevices;
 public class LogoutAllDevicesHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService,
-    TimeProvider timeProvider)
-    : IRequestHandler<LogoutAllDevicesCommand>
+    ISessionCacheService sessionCacheService,
+    TimeProvider timeProvider) : IRequestHandler<LogoutAllDevicesCommand>
 {
     public async Task Handle(LogoutAllDevicesCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId;
+        var now = timeProvider.GetUtcNow();
 
-        // Fetch ALL active REFRESH TOKENS for this user. 
-        // We explicitly ignore PasswordReset or EmailConfirmation tokens.
-        var allActiveTokens = await context.UserTokens
-            .Where(t => t.UserId == currentUserId
-                     && t.Type == UserTokenType.RefreshToken
-                     && t.ConsumedAt == null)
+        // 1. Fetch ALL active sessions (both API and Dashboard) for this user.
+        // The domain source of truth is now UserSessions, not UserTokens.
+        var activeSessions = await context.UserSessions
+            .Where(s => s.UserId == currentUserId && s.RevokedAt == null && s.ExpiresAt > now)
             .ToListAsync(cancellationToken);
 
-        if (!allActiveTokens.Any()) return;
+        if (!activeSessions.Any()) return;
 
-        foreach (var token in allActiveTokens)
+        // 2. Revoke durably in the database
+        foreach (var session in activeSessions)
         {
-            token.MarkAsConsumed(timeProvider);
+            session.Revoke(now);
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // 3. Invalidate distributed cache entries so all nodes observe the revoked session.
+        await Task.WhenAll(
+            activeSessions.Select(session =>
+                sessionCacheService.InvalidateSessionAsync(session.Id, cancellationToken))
+        );
     }
 }

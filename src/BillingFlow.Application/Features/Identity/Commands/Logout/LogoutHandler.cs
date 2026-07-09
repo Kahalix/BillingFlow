@@ -1,9 +1,9 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Interfaces;
-using BillingFlow.Domain.Enums;
-
 using MediatR;
-
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Identity.Commands.Logout;
@@ -11,35 +11,26 @@ namespace BillingFlow.Application.Features.Identity.Commands.Logout;
 public class LogoutHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService,
-    TimeProvider timeProvider)
-    : IRequestHandler<LogoutCommand>
+    ISessionCacheService sessionCacheService,
+    TimeProvider timeProvider) : IRequestHandler<LogoutCommand>
 {
     public async Task Handle(LogoutCommand request, CancellationToken cancellationToken)
     {
         var currentSessionId = currentUserService.SessionId;
-
+        
         if (currentSessionId == Guid.Empty)
-        {
             throw new UnauthorizedException("Invalid session context.");
-        }
 
-        // Fetch all tokens tied to this specific session that are still active
-        var activeSessionTokens = await context.UserTokens
-            .Where(t => t.SessionId == currentSessionId
-                     && t.Type == UserTokenType.RefreshToken
-                     && t.ConsumedAt == null)
-            .ToListAsync(cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        var session = await context.UserSessions.FirstOrDefaultAsync(s => s.Id == currentSessionId, cancellationToken);
 
-        if (!activeSessionTokens.Any())
+        if (session != null && session.IsActive(now))
         {
-            return; // Idempotency: Session is already dead, do nothing.
+            session.Revoke(now);
+            await context.SaveChangesAsync(cancellationToken);
+            
+            // Explicitly evict the cache to ensure API tokens tied to this session fail instantly
+            await sessionCacheService.InvalidateSessionAsync(currentSessionId, cancellationToken);
         }
-
-        foreach (var token in activeSessionTokens)
-        {
-            token.MarkAsConsumed(timeProvider);
-        }
-
-        await context.SaveChangesAsync(cancellationToken);
     }
 }

@@ -1,0 +1,12 @@
+using System;
+
+using BillingFlow.Application.Authorization.Requirements;
+
+using MediatR;
+
+namespace BillingFlow.Application.Features.Identity.Commands.DashboardLogout;
+
+/// <summary>
+/// Command to durably revoke a dashboard session from the database.
+/// </summary>
+public record DashboardLogoutCommand : IRequest, IAuthenticatedRequest;

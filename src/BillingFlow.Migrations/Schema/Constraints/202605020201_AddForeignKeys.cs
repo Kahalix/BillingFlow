@@ -7,11 +7,26 @@ public class AddForeignKeys : Migration
 {
     public override void Up()
     {
-        // 1. UserTokens -> Users (Technical data - Cascade is fine)
+        // 1. UserTokens -> Users 
+        // ENTERPRISE RULE: Rule.None.
         Create.ForeignKey("FK_UserTokens_Users_UserId")
             .FromTable("UserTokens").ForeignColumn("UserId")
             .ToTable("Users").PrimaryColumn("Id")
-            .OnDelete(System.Data.Rule.Cascade);
+            .OnDelete(System.Data.Rule.None);
+
+        // 1A. UserSessions -> Users
+        // ENTERPRISE RULE: Rule.None. Never hard delete sessions to preserve access history.
+        Create.ForeignKey("FK_UserSessions_Users_UserId")
+            .FromTable("UserSessions").ForeignColumn("UserId")
+            .ToTable("Users").PrimaryColumn("Id")
+            .OnDelete(System.Data.Rule.None);
+
+        // 1B. UserTokens -> UserSessions (Optional link)
+        // ENTERPRISE RULE: Rule.None.
+        Create.ForeignKey("FK_UserTokens_UserSessions_SessionId")
+            .FromTable("UserTokens").ForeignColumn("SessionId")
+            .ToTable("UserSessions").PrimaryColumn("Id")
+            .OnDelete(System.Data.Rule.None);
 
         // 2. Clients -> Users (Soft link, if user is deleted, client becomes orphaned but kept for billing history)
         Create.ForeignKey("FK_Clients_Users_UserId")
@@ -101,6 +116,10 @@ public class AddForeignKeys : Migration
         Delete.ForeignKey("FK_InvoiceItems_Invoices_InvoiceId").OnTable("InvoiceItems");
         Delete.ForeignKey("FK_Invoices_Clients_ClientId").OnTable("Invoices");
         Delete.ForeignKey("FK_Clients_Users_UserId").OnTable("Clients");
+
+        // Identity / Access
+        Delete.ForeignKey("FK_UserTokens_UserSessions_SessionId").OnTable("UserTokens");
+        Delete.ForeignKey("FK_UserSessions_Users_UserId").OnTable("UserSessions");
         Delete.ForeignKey("FK_UserTokens_Users_UserId").OnTable("UserTokens");
     }
 }

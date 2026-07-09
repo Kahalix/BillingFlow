@@ -18,6 +18,7 @@
 		<PackageReference Include="FluentAssertions" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
 		<PackageReference Include="Testcontainers.MsSql" />
+		<PackageReference Include="Testcontainers.Redis" />
 		<PackageReference Include="Hangfire.InMemory" />
 		<PackageReference Include="Respawn" />
 

@@ -8,6 +8,7 @@ public interface IApplicationDbContext
 {
     DbSet<AppUser> Users { get; }
     DbSet<UserToken> UserTokens { get; }
+    DbSet<UserSession> UserSessions { get; }
     DbSet<Client> Clients { get; }
     DbSet<Invoice> Invoices { get; }
     DbSet<InvoiceItem> InvoiceItems { get; }

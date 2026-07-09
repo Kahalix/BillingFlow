@@ -31,7 +31,7 @@ public static class DomainTestFactory
     }
 
     /// <summary>
-    /// Creates a mock UserToken. 
+    /// Creates a mock UserToken using domain factory methods.
     /// Optionally marks it as consumed to simulate Replay Attack scenarios.
     /// </summary>
     public static UserToken CreateUserToken(
@@ -40,25 +40,63 @@ public static class DomainTestFactory
         UserTokenType type = UserTokenType.RefreshToken,
         bool isConsumed = false,
         string hash = "mocked_token_hash",
+        DateTimeOffset? createdAt = null,
         Guid? id = null)
     {
-        var token = new UserToken(
-            userId,
-            sessionId ?? Guid.NewGuid(),
-            type,
-            hash,
-            DateTimeOffset.UtcNow.AddDays(7), // Default active expiry
-            DateTimeOffset.UtcNow,
-            null);
+        var now = createdAt ?? DateTimeOffset.UtcNow;
+        var expiry = now.AddDays(7);
+        UserToken token;
+
+        switch (type)
+        {
+            case UserTokenType.RefreshToken:
+                token = UserToken.CreateRefreshToken(userId, sessionId ?? Guid.NewGuid(), hash, now, expiry);
+                break;
+            case UserTokenType.PasswordReset:
+                token = UserToken.CreatePasswordResetToken(userId, hash, now, expiry);
+                break;
+            case UserTokenType.EmailConfirmation:
+                token = UserToken.CreateEmailConfirmationToken(userId, hash, "new-email@domain.com", now, expiry);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported token type.");
+        }
 
         if (isConsumed)
         {
-            token.MarkAsConsumed(TimeProvider.System);
+            token.MarkAsConsumed(now);
         }
 
         SetPrivateId(token, id ?? Guid.NewGuid());
         return token;
     }
+
+    /// <summary>
+    /// Creates a mock UserSession using the sliding/absolute expiration constructor bounds.
+    /// </summary>
+    public static UserSession CreateUserSession(
+        Guid userId,
+        DateTimeOffset? createdAt = null,
+        bool simulateLegacyNullLastSeen = false, // Encloses reflection safely
+        string? ipAddress = "127.0.0.1",
+        string? userAgent = "MockBrowser/1.0",
+        Guid? id = null)
+    {
+        var now = createdAt ?? DateTimeOffset.UtcNow;
+        var slidingExpiry = now.AddDays(7);
+        var absoluteExpiry = now.AddDays(30);
+
+        var session = new UserSession(userId, now, slidingExpiry, absoluteExpiry, ipAddress, userAgent);
+
+        if (simulateLegacyNullLastSeen)
+        {
+            typeof(UserSession).GetProperty(nameof(UserSession.LastSeenAt))?.SetValue(session, null);
+        }
+
+        SetPrivateId(session, id ?? Guid.NewGuid());
+        return session;
+    }
+
     public static Client CreateActiveClient(Guid? id = null)
     {
         var client = Client.Create(Guid.NewGuid(), "Test Corp", "TAX-000", new Address("St", "City", "Zip", "USA"));

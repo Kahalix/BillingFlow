@@ -193,8 +193,8 @@ public class AuthEndpointsTests : BaseIntegrationTest
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
-            var activeTokensCount = await db.UserTokens.CountAsync(t => t.UserId == userId && t.ConsumedAt == null);
-            activeTokensCount.Should().Be(0); // Everything was revoked
+            var activeSessionsCount = await db.UserSessions.CountAsync(s => s.UserId == userId && s.RevokedAt == null);
+            activeSessionsCount.Should().Be(0);
         }
     }
 
@@ -233,8 +233,8 @@ public class AuthEndpointsTests : BaseIntegrationTest
             var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
 
             // Verify pre-condition: User has exactly 2 active sessions
-            var activeTokens = await db.UserTokens.CountAsync(t => t.UserId == userId && t.ConsumedAt == null);
-            activeTokens.Should().Be(2);
+            var activeSessions = await db.UserSessions.CountAsync(s => s.UserId == userId && s.RevokedAt == null);
+            activeSessions.Should().Be(2);
 
             // Now, we create an authorized client to call the secure endpoint
             var authorizedClient = CreateAuthorizedClient("Customer", string.Empty, userId);
@@ -250,8 +250,8 @@ public class AuthEndpointsTests : BaseIntegrationTest
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
-            var activeTokensCount = await db.UserTokens.CountAsync(t => t.UserId == userId && t.ConsumedAt == null);
-            activeTokensCount.Should().Be(0);
+            var activeSessionsCount = await db.UserSessions.CountAsync(s => s.UserId == userId && s.RevokedAt == null);
+            activeSessionsCount.Should().Be(0);
         }
     }
 }

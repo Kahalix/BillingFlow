@@ -6,6 +6,11 @@ using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace BillingFlow.Application.Features.Identity.Commands.ResetPassword;
 
 public class ResetPasswordHandler(
@@ -34,8 +39,10 @@ public class ResetPasswordHandler(
             .Where(t => t.UserId == user!.Id && t.Type == UserTokenType.PasswordReset)
             .SingleOrDefaultAsync(t => t.TokenHash == incomingTokenHash, cancellationToken);
 
+        var now = timeProvider.GetUtcNow();
+
         // 3. Verify token validity
-        if (resetToken is null || !resetToken.IsActive(timeProvider))
+        if (resetToken is null || !resetToken.IsActive(now))
         {
             ThrowInvalidTokenException();
         }
@@ -45,7 +52,7 @@ public class ResetPasswordHandler(
         user!.ChangePassword(newPasswordHash);
 
         // 5. Invalidate the token
-        resetToken!.MarkAsConsumed(timeProvider);
+        resetToken!.MarkAsConsumed(now);
 
         await context.SaveChangesAsync(cancellationToken);
     }

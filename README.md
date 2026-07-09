@@ -22,13 +22,13 @@
 BillingFlow follows **Clean Architecture** with **Vertical Slice** feature organization. Business rules live in the domain and application layers, while infrastructure concerns stay isolated.
 
 - **CQRS** - write operations mutate rich domain aggregates through Entity Framework Core; read operations use Dapper or raw SQL for fast, purpose-built queries.
-- **DDD** - aggregates such as `Invoice`, `Payment`, `Client`, `ProvidedService`, and `AppUser` protect invariants and emit domain events.
+- **DDD** - aggregates such as `Invoice`, `Payment`, `Client`, `ProvidedService`, `AppUser`, and `UserSession` protect invariants and emit domain events.
 - **Transactional Outbox & Idempotency** - domain changes and integration events are persisted within the same database transaction, reducing the risk of lost side effects. A concurrent-safe background relay worker processes pending messages asynchronously, routing them to an idempotent consumer flow that uses lease-based tokens to coordinate dispatch ownership while supporting event fan-out.
 - **Post-Save Notification Queue** - decouples non-critical external I/O from the database transaction boundary. Best-effort real-time notifications (SignalR) are buffered in memory and processed after `SaveChangesAsync` succeeds, helping prevent slow network connections or Redis operations from blocking primary database connections.
 - **Edge Gateway & Security** - NGINX acts as a reverse proxy for API and SignalR traffic, with forwarded headers restricted to trusted proxy networks.
 - **Rate Limiting** - layered rate limiting combines a global API limiter with endpoint-specific policies for sensitive workflows.
 - **Idempotency & Concurrency** - Stripe webhook delivery, payment attempts, and token handling are protected with unique constraints, row versions, and explicit state transitions.
-- **Authorization** - JWT-based authentication is combined with permissions and policy-based checks. Customer-facing reads use row-level access rules inside handlers.
+- **Unified Authentication & Session Validation** - API consumers (JWT) and Dashboard Ops (Secure Cookies) share a unified identity architecture. Both schemes utilize a high-performance, distributed cache-aside validation layer to enforce real-time session revocation.
 - **Auditing** - EF Core interceptors capture JSON deltas for entity changes and correlate them with distributed trace identifiers.
 - **Observability & Telemetry** - configured with OpenTelemetry and Serilog, with traces, metrics, and structured logs routed through Grafana Alloy to Prometheus, Loki, and Tempo.
 - **Real-time** - SignalR pushes payment updates to the frontend, backed by Redis for horizontal scaling.
@@ -44,7 +44,8 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 
 ### Identity & Security
 * **Users** - system identities, roles, password hashes, and lifecycle state.
-* **UserTokens** - refresh tokens, password reset tokens, replay-detection support, and session tracking.
+* **UserSessions** - the aggregate root and single source of truth for all authenticated sessions, providing unified global revocation and telemetry auditing.
+* **UserTokens** - session-bound refresh tokens and single-use security tokens, protected by optimistic concurrency (`RowVersion`) for robust replay-attack mitigation.
 
 ### CRM & Billing
 * **Clients** - billing profiles, soft-delete lifecycle, and optional 1:1 linkage to `Users`.
@@ -67,8 +68,10 @@ The system is centered around SQL Server tables mapped with EF Core and managed 
 ## 🚀 Domain Modules
 
 ### 🛡️ Identity & Security
-* Secure JWT issuance with refresh-token rotation.
-* Replay-attack detection for reused refresh tokens.
+* **Unified Session Architecture**: A single `UserSession` model securely handles both API (JWT) and Infrastructure Dashboard (Cookie) authentication.
+* **Cache-Aside Validation**: High-performance session validation utilizing a distributed Redis cache for instant, cluster-wide session revocation.
+* **Replay-Attack Mitigation**: Strict token rotation leveraging EF Core optimistic concurrency (`RowVersion`) to catch and reject concurrent refresh attempts.
+* **Clean Contexts**: CQRS commands are completely decoupled from ASP.NET Core HTTP concerns using an ambient `IRequestContext`.
 * Hierarchical role management for admin and back-office users.
 * Global and endpoint-specific rate limiting policies protect API resources and sensitive authentication flows.
 * Account recovery and verification emails are dispatched via the Outbox pattern.
@@ -187,7 +190,7 @@ The collection is prepared for:
 
 * **Domain tests** validate aggregate invariants in isolation.
 * **Application tests** verify handlers, policies, and command/query behavior with mocks.
-* **Integration tests** use Testcontainers to run against a real SQL Server instance.
+* **Integration tests** use Testcontainers to run against real SQL Server and Redis instances.
 * **Respawn** resets database state between tests for deterministic execution.
 * **Concurrency tests** exercise raw SQL UPSERT logic and webhook idempotency under parallel execution.
 

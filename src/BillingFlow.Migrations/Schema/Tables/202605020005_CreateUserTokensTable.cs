@@ -11,12 +11,13 @@ public class CreateUserTokensTable : Migration
             .WithColumn("Id").AsGuid().PrimaryKey()
             .WithColumn("UserId").AsGuid().NotNullable()
             .WithColumn("TokenHash").AsString(128).NotNullable()
-            .WithColumn("SessionId").AsGuid().NotNullable()
+            .WithColumn("SessionId").AsGuid().Nullable()
             .WithColumn("Type").AsInt32().NotNullable()
             .WithColumn("Expiry").AsDateTimeOffset().NotNullable()
             .WithColumn("ConsumedAt").AsDateTimeOffset().Nullable()
             .WithColumn("CreatedAt").AsDateTimeOffset().NotNullable()
-            .WithColumn("Data").AsString(255).Nullable();
+            .WithColumn("Data").AsString(255).Nullable()
+            .WithColumn("RowVersion").AsCustom("rowversion").NotNullable();
 
         // 1. Unique Index on TokenHash
         Create.Index("IX_UserTokens_TokenHash")
@@ -38,17 +39,10 @@ public class CreateUserTokensTable : Migration
             .OnColumn("Type").Ascending()
             .OnColumn("ConsumedAt").Ascending();
 
-
         // 4. Single Index for Cleanup Jobs (Optimized for WHERE Expiry <= @now)
         Create.Index("IX_UserTokens_Expiry")
             .OnTable("UserTokens")
             .OnColumn("Expiry").Ascending();
-
-        //// 4. Composite Index for Cleanup Jobs
-        //Create.Index("IX_UserTokens_Type_Expiry")
-        //    .OnTable("UserTokens")
-        //    .OnColumn("Type").Ascending()
-        //    .OnColumn("Expiry").Ascending();
     }
 
     public override void Down()

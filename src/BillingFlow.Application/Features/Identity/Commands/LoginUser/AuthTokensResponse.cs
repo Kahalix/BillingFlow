@@ -6,5 +6,5 @@ namespace BillingFlow.Application.Features.Identity.Commands.LoginUser;
 public record AuthTokensResponse(
     string AccessToken,
     string RefreshToken,
-    DateTimeOffset ExpiresAt
+    DateTimeOffset RefreshTokenExpiresAt
 );

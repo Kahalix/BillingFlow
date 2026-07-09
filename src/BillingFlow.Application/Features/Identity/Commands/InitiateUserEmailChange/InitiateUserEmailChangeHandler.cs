@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Features.Identity.IntegrationEvents;
+using BillingFlow.Application.Identity;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
@@ -12,6 +13,7 @@ using BillingFlow.Domain.Exceptions;
 using MediatR;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BillingFlow.Application.Features.Identity.Commands.InitiateUserEmailChange;
 
@@ -20,9 +22,11 @@ public class InitiateUserEmailChangeHandler(
     ITokenGenerator tokenGenerator,
     ITokenHashService tokenHashService,
     IIntegrationEventPublisher eventPublisher,
+    IOptions<IdentityOptions> options,
     TimeProvider timeProvider)
     : IRequestHandler<InitiateUserEmailChangeCommand>
 {
+    private readonly IdentityOptions _options = options.Value;
     public async Task Handle(InitiateUserEmailChangeCommand request, CancellationToken cancellationToken)
     {
         var normalizedNewEmail = request.NewEmail.Trim().ToLowerInvariant();
@@ -41,21 +45,20 @@ public class InitiateUserEmailChangeHandler(
             throw new DomainException("This email address is already associated with another account.");
         }
 
-        // 3. Generate a secure token
+        // 3. Generate token and save
         var rawToken = tokenGenerator.GenerateSecureToken();
         var tokenHash = tokenHashService.HashToken(rawToken);
 
         var now = timeProvider.GetUtcNow();
-        var expiry = now.AddHours(24);
+        var expiry = now.Add(_options.EmailConfirmationLifetime);
 
-        var token = new UserToken(
+        // Use the dedicated factory method to create the email confirmation token
+        var token = UserToken.CreateEmailConfirmationToken(
             request.TargetUserId,
-            Guid.Empty,
-            UserTokenType.EmailConfirmation,
             tokenHash,
-            expiry,
+            normalizedNewEmail, // Payload Data
             now,
-            data: normalizedNewEmail);
+            expiry);
 
         context.UserTokens.Add(token);
 

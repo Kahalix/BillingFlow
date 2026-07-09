@@ -1,4 +1,5 @@
 using BillingFlow.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -32,10 +33,6 @@ public class UserTokenConfiguration : IEntityTypeConfiguration<UserToken>
         // SQL Server left-prefix rule dictates that querying solely by 'Expiry' requires 'Expiry' to be the leading column.
         builder.HasIndex(t => t.Expiry);
 
-        //// 4. Composite Index for Background Cleanup Jobs
-        //// Covers queries filtering by expired tokens of specific types
-        //builder.HasIndex(t => new { t.Type, t.Expiry });
-
         builder.Property(t => t.ConsumedAt)
             .IsRequired(false);
 
@@ -43,8 +40,23 @@ public class UserTokenConfiguration : IEntityTypeConfiguration<UserToken>
             .IsRequired();
 
         builder.Property(t => t.Data)
-            .HasMaxLength(255) 
+            .HasMaxLength(255)
             .IsRequired(false);
 
+        // Required to catch DbUpdateConcurrencyException during Refresh Token replay attempts
+        builder.Property(t => t.RowVersion)
+            .IsRowVersion();
+
+        // DDD-compliant foreign keys (Restrict to preserve enterprise security audit trails)
+        builder.HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(t => t.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<UserSession>()
+            .WithMany()
+            .HasForeignKey(t => t.SessionId)
+            .IsRequired(false) // SessionId is nullable
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

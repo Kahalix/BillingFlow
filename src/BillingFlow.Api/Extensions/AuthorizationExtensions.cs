@@ -1,14 +1,19 @@
+using System;
 using System.Text;
 using System.Threading.Tasks;
+
 using BillingFlow.Application.Authorization;
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
 using BillingFlow.Infrastructure.Authorization;
 
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 namespace BillingFlow.Api.Extensions;
@@ -22,83 +27,125 @@ public static class AuthorizationExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // 1. Configure JWT Authentication
-        var secret = configuration["JwtSettings:Secret"]
+        var secret = configuration["Jwt:Secret"]
             ?? throw new InvalidOperationException("JWT Secret is missing from configuration.");
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+        // 1. SMART ROUTER (Policy Scheme)
+        // Dynamically forwards authentication resolution based on the request URL.
+        services.AddAuthentication(options =>
+        {
+            options.DefaultScheme = "SmartRouter";
+            options.DefaultChallengeScheme = "SmartRouter";
+        })
+        .AddPolicyScheme("SmartRouter", "JWT or Cookie Routing", options =>
+        {
+            options.ForwardDefaultSelector = context =>
             {
-                options.TokenValidationParameters = new TokenValidationParameters
+                var path = context.Request.Path;
+
+                // Infrastructure dashboards and ops logins use browser-friendly cookies
+                if (path.StartsWithSegments("/hangfire") || path.StartsWithSegments("/api/ops/auth"))
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = configuration["JwtSettings:Issuer"],
-                    ValidAudience = configuration["JwtSettings:Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
-                    ClockSkew = TimeSpan.Zero // Strictly respect token expiration time
-                };
+                    return "AdminCookie";
+                }
 
-                options.Events = new JwtBearerEvents
+                // Core application APIs expect strict JWT Bearers
+                return JwtBearerDefaults.AuthenticationScheme;
+            };
+        })
+
+        // 2. JWT BEARER (For Standard API & SignalR)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = configuration["Jwt:Issuer"],
+                ValidAudience = configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                ClockSkew = TimeSpan.Zero // Strictly respect token expiration time
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                // --- SignalR JWT Configuration ---
+                OnMessageReceived = context =>
                 {
-                    // --- SignalR JWT Configuration ---
-                    // SignalR (WebSockets) in browsers cannot send custom HTTP headers like "Authorization: Bearer".
-                    // Therefore, the token is passed in the query string (?access_token=...).
-                    // We must intercept this and bind it to the authentication context.
-                    OnMessageReceived = context =>
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+
+                    // Automatically bind the token if the request targets a SignalR hub
+                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
                     {
-                        var accessToken = context.Request.Query["access_token"];
-                        var path = context.HttpContext.Request.Path;
-
-                        // Automatically bind the token if the request targets a SignalR hub
-                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-                        {
-                            context.Token = accessToken;
-                        }
-
-                        return Task.CompletedTask;
-                    },
-
-                    // --- Real-time Session Revocation Check ---
-                    OnTokenValidated = async context =>
-                    {
-                        // Resolve scoped dependencies from the current HTTP Request context
-                        var dbContext = context.HttpContext.RequestServices.GetRequiredService<IApplicationDbContext>();
-                        var timeProvider = context.HttpContext.RequestServices.GetRequiredService<TimeProvider>();
-
-                        var sessionIdClaim = context.Principal?.FindFirst(CustomClaimTypes.SessionId);
-
-                        if (sessionIdClaim == null || !Guid.TryParse(sessionIdClaim.Value, out var sessionId))
-                        {
-                            context.Fail("Token does not contain a valid SessionId.");
-                            return;
-                        }
-
-                        var now = timeProvider.GetUtcNow();
-
-                        // Strict Revocation Check: 
-                        // The session is only valid if its root RefreshToken is unconsumed and not expired.
-                        var isSessionValid = await dbContext.UserTokens
-                            .AnyAsync(t =>
-                                t.SessionId == sessionId &&
-                                t.Type == UserTokenType.RefreshToken &&
-                                t.ConsumedAt == null &&
-                                t.Expiry > now,
-                                context.HttpContext.RequestAborted);
-
-                        if (!isSessionValid)
-                        {
-                            // Triggers an immediate HTTP 401 Unauthorized, disregarding the JWT's internal validity
-                            context.Fail("This session has been revoked or expired.");
-                        }
+                        context.Token = accessToken;
                     }
-                };
-            });
 
-        // 2. Configure Permission-based Authorization Policies
-        // Explicitly mapping each permission guarantees startup-time validation of policy names.
+                    return Task.CompletedTask;
+                },
+
+                // --- Real-time Session Revocation Check (API) ---
+                OnTokenValidated = async context =>
+                {
+                    var sessionIdClaim = context.Principal?.FindFirst(CustomClaimTypes.SessionId);
+
+                    if (sessionIdClaim == null || !Guid.TryParse(sessionIdClaim.Value, out var sessionId))
+                    {
+                        context.Fail("Token does not contain a valid SessionId.");
+                        return;
+                    }
+
+                    // Unified cache-aside validation for JWT identical to AdminCookie.
+                    // Completely decoupled from the legacy UserTokens DB table lookup.
+                    var sessionValidator = context.HttpContext.RequestServices.GetRequiredService<ISessionValidationService>();
+                    var isActive = await sessionValidator.IsSessionActiveAsync(sessionId, context.HttpContext.RequestAborted);
+
+                    if (!isActive)
+                    {
+                        context.Fail("This session has been revoked or expired.");
+                    }
+                }
+            };
+        })
+
+        // 3. SECURE COOKIE (For Dashboard Ops)
+        .AddCookie("AdminCookie", options =>
+        {
+            options.Cookie.Name = "BillingFlow.Dashboard.Auth";
+            options.Cookie.Path = "/";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+            options.SlidingExpiration = false;
+            options.ExpireTimeSpan = TimeSpan.FromHours(8);
+
+            // Revocation & Performance Caching for Dashboard
+            options.Events = new CookieAuthenticationEvents
+            {
+                OnValidatePrincipal = async context =>
+                {
+                    var sessionIdClaim = context.Principal?.FindFirst(CustomClaimTypes.SessionId);
+                    if (sessionIdClaim == null || !Guid.TryParse(sessionIdClaim.Value, out var sessionId))
+                    {
+                        context.RejectPrincipal();
+                        return;
+                    }
+
+                    // Unified cache-aside validation
+                    var sessionValidator = context.HttpContext.RequestServices.GetRequiredService<ISessionValidationService>();
+                    var isActive = await sessionValidator.IsSessionActiveAsync(sessionId, context.HttpContext.RequestAborted);
+
+                    if (!isActive)
+                    {
+                        context.RejectPrincipal();
+                    }
+                }
+            };
+        });
+
+        // 4. Configure Permission-based Authorization Policies
         services.AddAuthorizationBuilder()
             // Users
             .AddPolicy(AppPermissions.UsersRead, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.UsersRead)))
@@ -137,7 +184,7 @@ public static class AuthorizationExtensions
             .AddPolicy(AppPermissions.PaymentsCreateManual, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.PaymentsCreateManual)))
             .AddPolicy(AppPermissions.PaymentsRefund, policy => policy.Requirements.Add(new PermissionRequirement(AppPermissions.PaymentsRefund)));
 
-        // 3. Register the custom permission handler
+        // 5. Register the custom permission handler
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
         return services;

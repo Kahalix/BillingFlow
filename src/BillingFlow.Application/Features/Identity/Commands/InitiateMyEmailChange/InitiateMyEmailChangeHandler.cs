@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Features.Identity.IntegrationEvents;
+using BillingFlow.Application.Identity;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
@@ -12,6 +13,7 @@ using BillingFlow.Domain.Exceptions;
 using MediatR;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BillingFlow.Application.Features.Identity.Commands.InitiateMyEmailChange;
 
@@ -22,9 +24,11 @@ public class InitiateMyEmailChangeHandler(
     ITokenGenerator tokenGenerator,
     ITokenHashService tokenHashService,
     IIntegrationEventPublisher eventPublisher,
+    IOptions<IdentityOptions> options,
     TimeProvider timeProvider)
     : IRequestHandler<InitiateMyEmailChangeCommand>
 {
+    private readonly IdentityOptions _options = options.Value;
     public async Task Handle(InitiateMyEmailChangeCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId;
@@ -51,16 +55,15 @@ public class InitiateMyEmailChangeHandler(
         var tokenHash = tokenHashService.HashToken(rawToken);
 
         var now = timeProvider.GetUtcNow();
-        var expiry = now.AddHours(24);
+        var expiry = now.Add(_options.EmailConfirmationLifetime);
 
-        var token = new UserToken(
+        // Use the dedicated factory method to create the email confirmation token
+        var token = UserToken.CreateEmailConfirmationToken(
             currentUserId,
-            Guid.Empty,
-            UserTokenType.EmailConfirmation,
             tokenHash,
-            expiry,
+            normalizedNewEmail, // Payload Data
             now,
-            data: normalizedNewEmail);
+            expiry);
 
         context.UserTokens.Add(token);
 

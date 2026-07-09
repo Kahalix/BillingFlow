@@ -5,22 +5,28 @@ using BillingFlow.Infrastructure.Database;
 using BillingFlow.Infrastructure.Database.Interceptors;
 using BillingFlow.Infrastructure.Identity;
 using BillingFlow.Infrastructure.Invoices;
+using BillingFlow.Infrastructure.Outbox;
 using BillingFlow.Infrastructure.Projections;
 using BillingFlow.Infrastructure.Stripe;
-using BillingFlow.Infrastructure.Outbox;
 
 using Hangfire;
 using Hangfire.SqlServer;
 
-using Stripe;
-using Stripe.Checkout;
-
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+// <-- REQUIRED NAMESPACE FOR REDIS CACHE -->
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 using QuestPDF.Infrastructure;
+
+using StackExchange.Redis;
+
+using Stripe;
+using Stripe.Checkout;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -46,29 +52,105 @@ public static class DependencyInjection
                    // Interceptor order matters:
                    // 1. Dispatch domain events (which might trigger MediatR handlers that mutate DbContext further).
                    // 2. Audit the FINAL state of the ChangeTracker.
-                   .AddInterceptors(auditInterceptor, domainEventsInterceptor);
+                   .AddInterceptors(domainEventsInterceptor, auditInterceptor);
         });
 
         // Interface mapping for architecture boundary compliance
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<BillingDbContext>());
         services.AddSingleton<IDbConnectionFactory, SqlConnectionFactory>();
-
         services.AddScoped<IClientBalanceProjectionWriter, ClientBalanceProjectionWriter>();
 
-        // 2. Identity Services
+        // ==============================================================================
+        // 2. Identity Services & Session Cache
+        // ==============================================================================
+
+        // Options Pattern with strict Fail-Fast validation on application startup
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
+
+        services.AddOptions<SessionCacheOptions>()
+            .Bind(configuration.GetSection(SessionCacheOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<SessionCacheOptions>, SessionCacheOptionsValidator>();
+
+        // --- DISTRIBUTED CACHE & DATA PROTECTION REGISTRATION ---
+        var redisConnectionString = configuration.GetConnectionString("Redis");
+
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            // 1. PRIMARY: Redis (Used via Docker Compose and in Production)
+
+            // Create the multiplexer EXACTLY ONCE during startup.
+            // This avoids the BuildServiceProvider() anti-pattern and prevents connection leaks.
+            var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+
+            redisOptions.AbortOnConnectFail = false;
+
+            var redisMultiplexer = ConnectionMultiplexer.Connect(redisOptions);
+
+            // Register it as a Singleton so other services (e.g., SignalR) can reuse this exact instance.
+            services.AddSingleton<IConnectionMultiplexer>(redisMultiplexer);
+
+            // Cache (Instructed to reuse the shared multiplexer instead of creating its own)
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.ConnectionMultiplexerFactory = () => Task.FromResult<IConnectionMultiplexer>(redisMultiplexer);
+                options.InstanceName = "BillingFlow_Cache:";
+            });
+
+            // Data Protection (Reuses the shared multiplexer)
+            services.AddDataProtection()
+                .SetApplicationName("BillingFlow")
+                .PersistKeysToStackExchangeRedis(redisMultiplexer, "DataProtection-Keys");
+
+            // NOTE - XML Encryptor Warning:
+            // The code above stores keys in Redis, solving container-restart logout issues.
+            // The compiler might still log "No XML encryptor configured". 
+            // Inside an isolated Docker bridge network, this is acceptable. 
+            // For Production/Cloud (e.g., Azure), uncomment below and use a KeyVault or Certificate:
+            // .ProtectKeysWithCertificate(new X509Certificate2("path_to_cert.pfx", "password"));
+        }
+        else if (environment.IsDevelopment())
+        {
+            // 2. FALLBACK: In-Memory (ONLY allowed in local development without Docker)
+
+            services.AddDistributedMemoryCache();
+
+            services.AddDataProtection()
+                .SetApplicationName("BillingFlow")
+                .PersistKeysToFileSystem(new DirectoryInfo("/home/app/.aspnet/DataProtection-Keys"));
+        }
+        else
+        {
+            // 3. FAIL-FAST: Production environment strictly requires Redis.
+            throw new InvalidOperationException(
+                "Redis connection string is missing. A distributed cache and key ring are strictly required in non-development environments to prevent session fragmentation and key loss.");
+        }
+
+        services.AddSingleton<ISessionCacheService, DistributedSessionCacheService>();
+
+        // --- AUTH & SECURITY SERVICES ---
         services.AddHttpContextAccessor(); // Required to read claims from HTTP request
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuditContext, AuditContext>();
+        services.AddScoped<ISessionValidationService, SessionValidationService>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenGenerator, TokenGenerator>();
         services.AddSingleton<ITokenHashService, TokenHashService>();
         services.AddSingleton<IPermissionClaimsProvider, PermissionClaimsProvider>();
         services.AddSingleton<IInvoiceNumberGenerator, SequenceInvoiceNumberGenerator>();
+        services.AddScoped<IRequestContext, HttpRequestContext>();
 
         // System time abstraction for unit testing
         services.AddSingleton(TimeProvider.System);
 
+        // ==============================================================================
         // 3. External Services (Stripe, Hangfire, etc.)
+        // ==============================================================================
 
         // 1. Configure Global Infrastructure Settings
         QuestPDF.Settings.License = LicenseType.Community;
@@ -77,7 +159,6 @@ public static class DependencyInjection
         services.AddSingleton<IInvoicePdfRenderer, QuestPdfInvoiceRenderer>();
 
         // Use ConsoleEmailSender for local development. 
-        // For production, a real implementation (e.g., SendGrid/SMTP) should be registered.
         if (environment.IsDevelopment())
         {
             services.AddTransient<IEmailSender, ConsoleEmailSender>();
@@ -88,18 +169,12 @@ public static class DependencyInjection
         }
 
         // Stripe
-
-        // Global key
         StripeConfiguration.ApiKey = configuration["Stripe:SecretKey"];
-
-        // 1. Register Stripe SessionService
         services.AddTransient<SessionService>();
-
-        // 2. Register our custom StripeService
         services.AddScoped<IStripeService, StripeIntegrationService>();
         services.AddScoped<IStripeWebhookValidator, StripeWebhookValidator>();
 
-        // --- Hangfire Configuration ---
+        // Hangfire
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("DefaultConnection not found in configuration.");
 
@@ -115,13 +190,12 @@ public static class DependencyInjection
                 UseRecommendedIsolationLevel = true,
             }));
 
-        // Register the background job processing server (Worker)
         services.AddHangfireServer();
-
-        // Register our custom abstraction to decouple the Application layer from Hangfire
         services.AddTransient<BillingFlow.Application.Interfaces.IBackgroundJobClient, HangfireService>();
 
+        // ==============================================================================
         // 4. Transactional Outbox & Post-Commit Patterns
+        // ==============================================================================
 
         // Post-Commit Action Queue (Scoped to current HTTP Request) for UI/UX best-effort notifications (SignalR)
         services.AddScoped<IPostCommitActionQueue, PostCommitActionQueue>();

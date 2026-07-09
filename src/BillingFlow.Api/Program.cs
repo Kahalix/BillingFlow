@@ -39,7 +39,7 @@ try
     builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
     // API Specific Services (Controllers, Swagger, Exception Handler, Rate Limiting, OpenTelemetry)
-    builder.Services.AddPresentation(builder.Configuration);
+    builder.Services.AddPresentation(builder.Configuration, builder.Environment);
 
     // Custom Web Authorization (from AuthorizationExtensions.cs)
     builder.Services.AddWebAuthorization(builder.Configuration);
@@ -110,9 +110,11 @@ try
     // 9. Map Infrastructure & Application Endpoints
     app.MapHangfireDashboard("/hangfire", new DashboardOptions
     {
-        Authorization = app.Environment.IsDevelopment()
-            ? []
-            : [new HangfireAuthorizationFilter()]
+        Authorization = [new HangfireAuthorizationFilter()],
+
+        // PRINCIPLE OF LEAST PRIVILEGE
+        // Prevents accidental job deletion/execution in production environments by default.
+        IsReadOnlyFunc = _ => builder.Configuration.GetValue("Hangfire:IsReadOnly", true)
     });
 
     app.InitializeHangfireJobs();

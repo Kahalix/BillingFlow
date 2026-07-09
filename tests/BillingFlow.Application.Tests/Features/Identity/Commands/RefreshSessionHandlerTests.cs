@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using BillingFlow.Application.Common.Exceptions;
 using BillingFlow.Application.Features.Identity.Commands.RefreshSession;
+using BillingFlow.Application.Identity;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Application.Tests.Helpers;
 using BillingFlow.Domain.Entities;
@@ -14,6 +14,8 @@ using BillingFlow.Domain.Enums;
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 
 using MockQueryable.Moq;
 
@@ -28,21 +30,38 @@ public class RefreshSessionHandlerTests
     private readonly Mock<IApplicationDbContext> _dbContextMock;
     private readonly Mock<ITokenGenerator> _tokenGeneratorMock;
     private readonly Mock<ITokenHashService> _tokenHashServiceMock;
-    private readonly TimeProvider _timeProvider;
+    private readonly Mock<ISessionCacheService> _sessionCacheServiceMock;
+    private readonly FakeTimeProvider _timeProvider;
+    private readonly IdentityOptions _identityOptions;
     private readonly RefreshSessionHandler _handler;
+
+    private readonly DateTimeOffset _testStartTime = new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
 
     public RefreshSessionHandlerTests()
     {
-        // Using Strict behavior ensures we don't have unexpected invocations during security flows
         _dbContextMock = new Mock<IApplicationDbContext>();
         _tokenGeneratorMock = new Mock<ITokenGenerator>(MockBehavior.Strict);
         _tokenHashServiceMock = new Mock<ITokenHashService>(MockBehavior.Strict);
-        _timeProvider = TimeProvider.System;
+        _sessionCacheServiceMock = new Mock<ISessionCacheService>(MockBehavior.Strict);
+
+        _timeProvider = new FakeTimeProvider();
+        _timeProvider.SetUtcNow(_testStartTime);
+
+        _identityOptions = new IdentityOptions
+        {
+            SessionLifetime = TimeSpan.FromDays(7),
+            AbsoluteSessionLifetime = TimeSpan.FromDays(30),
+            RefreshTokenLifetime = TimeSpan.FromDays(7)
+        };
+
+        var optionsMock = Options.Create(_identityOptions);
 
         _handler = new RefreshSessionHandler(
             _dbContextMock.Object,
             _tokenGeneratorMock.Object,
             _tokenHashServiceMock.Object,
+            _sessionCacheServiceMock.Object,
+            optionsMock,
             _timeProvider);
     }
 
@@ -51,63 +70,44 @@ public class RefreshSessionHandlerTests
     {
         // Arrange
         var command = new RefreshSessionCommand("invalid_raw_token");
-        var hashedToken = "hashed_invalid_token";
-
-        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
-
-        // Setup empty database
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns("hashed_invalid_token");
         _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken>().BuildMockDbSet().Object);
-        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser>().BuildMockDbSet().Object);
 
-        // Act & Assert
+        // Act
         Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         await action.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Invalid refresh token.");
     }
 
     [Fact]
-    public async Task Handle_WhenTokenIsAlreadyConsumed_ShouldTriggerReplayMitigationAndThrow()
+    public async Task Handle_WhenSessionIsMissing_ShouldThrowForbiddenException()
     {
         // Arrange
-        var command = new RefreshSessionCommand("consumed_raw_token");
-        var hashedToken = "hashed_consumed_token";
-        var sessionId = Guid.NewGuid();
+        var command = new RefreshSessionCommand("valid_raw_token");
+        var hashedToken = "hashed_valid_token";
+
+        var user = DomainTestFactory.CreateActiveUser();
+        var token = DomainTestFactory.CreateUserToken(
+            userId: user.Id,
+            sessionId: Guid.NewGuid(), // Orphaned session ID
+            isConsumed: false,
+            hash: hashedToken,
+            createdAt: _testStartTime);
 
         _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
 
-        // Create an active user using the Factory
-        var user = DomainTestFactory.CreateActiveUser();
-
-        // Create a token that has ALREADY been consumed (triggering the Replay Attack scenario)
-        var consumedToken = DomainTestFactory.CreateUserToken(
-            userId: user.Id,
-            sessionId: sessionId,
-            isConsumed: true,
-            hash: hashedToken);
-
-        // Create another token in the same session that is still active
-        var activeSiblingToken = DomainTestFactory.CreateUserToken(
-            userId: user.Id,
-            sessionId: sessionId,
-            isConsumed: false,
-            hash: "other_hash");
-
+        _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken> { token }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession>().BuildMockDbSet().Object); // Missing session
         _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
-        _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken> { consumedToken, activeSiblingToken }.BuildMockDbSet().Object);
-        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        // Act & Assert
+        // Act
         Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
 
-        await action.Should().ThrowAsync<UnauthorizedException>()
-            .WithMessage("Session compromise detected. All active tokens for this session have been revoked. Please log in again.");
-
-        // SECURITY CHECK: The active sibling token MUST be revoked (ConsumedAt is populated)
-        activeSiblingToken.IsActive(_timeProvider).Should().BeFalse();
-
-        // Verify that the emergency revocation was saved to the database
-        _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // Assert
+        await action.Should().ThrowAsync<ForbiddenException>()
+            .WithMessage("Invalid or suspended account context.");
     }
 
     [Fact]
@@ -116,28 +116,143 @@ public class RefreshSessionHandlerTests
         // Arrange
         var command = new RefreshSessionCommand("valid_raw_token");
         var hashedToken = "hashed_valid_token";
-        var sessionId = Guid.NewGuid();
 
-        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
-
-        // Create a suspended user using the Factory
         var user = DomainTestFactory.CreateActiveUser();
         user.Suspend(); // Mutate state to Suspended
 
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime);
         var token = DomainTestFactory.CreateUserToken(
             userId: user.Id,
-            sessionId: sessionId,
+            sessionId: session.Id,
             isConsumed: false,
-            hash: hashedToken);
+            hash: hashedToken,
+            createdAt: _testStartTime);
 
-        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
+
         _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken> { token }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
 
-        // Act & Assert
+        // Act
         Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         await action.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("This account is currently suspended or deactivated.");
+            .WithMessage("Invalid or suspended account context.");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTokenIsAlreadyConsumed_ShouldTriggerReplayMitigationAndThrow()
+    {
+        // Arrange
+        var command = new RefreshSessionCommand("consumed_raw_token");
+        var hashedToken = "hashed_consumed_token";
+
+        var user = DomainTestFactory.CreateActiveUser();
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime);
+
+        // Create a token that has already been consumed (Replay Attack trigger)
+        var consumedToken = DomainTestFactory.CreateUserToken(
+            userId: user.Id,
+            sessionId: session.Id,
+            isConsumed: true,
+            hash: hashedToken,
+            createdAt: _testStartTime);
+
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
+        _sessionCacheServiceMock.Setup(x => x.InvalidateSessionAsync(session.Id, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken> { consumedToken }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        // Act
+        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await action.Should().ThrowAsync<UnauthorizedException>()
+            .WithMessage("Session compromise detected. The session has been revoked.");
+
+        // Verify session revocation and cache eviction
+        session.IsActive(_timeProvider.GetUtcNow()).Should().BeFalse();
+        _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _sessionCacheServiceMock.Verify(c => c.InvalidateSessionAsync(session.Id, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenRefreshTokenIsExpired_ShouldTriggerCompromiseAndThrow()
+    {
+        // Arrange
+        // Current implementation treats expired and consumed refresh tokens identically.
+        // Both trigger session revocation because UserToken.IsActive() returns false in both scenarios.
+        var command = new RefreshSessionCommand("expired_raw_token");
+        var hashedToken = "hashed_expired_token";
+
+        var user = DomainTestFactory.CreateActiveUser();
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime);
+
+        var token = DomainTestFactory.CreateUserToken(
+            userId: user.Id,
+            sessionId: session.Id,
+            isConsumed: false,
+            hash: hashedToken,
+            createdAt: _testStartTime);
+
+        // Advance time PAST the token expiration (7 days)
+        _timeProvider.Advance(TimeSpan.FromDays(8));
+        var now = _timeProvider.GetUtcNow();
+
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
+        _sessionCacheServiceMock.Setup(x => x.InvalidateSessionAsync(session.Id, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken> { token }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        // Act
+        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await action.Should().ThrowAsync<UnauthorizedException>()
+            .WithMessage("Session compromise detected. The session has been revoked.");
+
+        session.IsActive(now).Should().BeFalse();
+        _sessionCacheServiceMock.Verify(x => x.InvalidateSessionAsync(session.Id, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenSessionIsExpired_ShouldThrowUnauthorizedException()
+    {
+        // Arrange
+        var command = new RefreshSessionCommand("valid_raw_token");
+        var hashedToken = "hashed_valid_token";
+
+        var user = DomainTestFactory.CreateActiveUser();
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime);
+
+        // To isolate Session expiration logic, pass a Token that is artificially still valid
+        var token = UserToken.CreateRefreshToken(user.Id, session.Id, hashedToken, _testStartTime, _testStartTime.AddDays(14));
+
+        // Advance time past the session sliding expiration
+        _timeProvider.Advance(TimeSpan.FromDays(8));
+
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken> { token }.BuildMockDbSet().Object);
+
+        // Act
+        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await action.Should().ThrowAsync<UnauthorizedException>()
+            .WithMessage("This session has expired or been revoked.");
     }
 
     [Fact]
@@ -146,80 +261,233 @@ public class RefreshSessionHandlerTests
         // Arrange
         var command = new RefreshSessionCommand("valid_raw_token");
         var hashedToken = "hashed_valid_token";
-        var sessionId = Guid.NewGuid();
 
         var user = DomainTestFactory.CreateActiveUser();
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime);
 
         var token = DomainTestFactory.CreateUserToken(
             userId: user.Id,
-            sessionId: sessionId,
+            sessionId: session.Id,
             isConsumed: false,
-            hash: hashedToken);
-
-        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
-        _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken> { token }.BuildMockDbSet().Object);
+            hash: hashedToken,
+            createdAt: _testStartTime);
 
         _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
-        _tokenGeneratorMock.Setup(x => x.GenerateJwt(user, sessionId)).Returns("new_jwt");
+        _tokenGeneratorMock.Setup(x => x.GenerateJwt(user, session.Id)).Returns("new_jwt");
         _tokenGeneratorMock.Setup(x => x.GenerateSecureToken()).Returns("new_raw_refresh");
         _tokenHashServiceMock.Setup(x => x.HashToken("new_raw_refresh")).Returns("new_hashed_refresh");
 
-        // Simulate a Race Condition (two requests trying to refresh the same token at the exact same millisecond)
+        var tokensDbSetMock = new List<UserToken> { token }.BuildMockDbSet();
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(tokensDbSetMock.Object);
+
+        // Simulate a Race Condition where another request rotates this exact token at the same millisecond
         _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DbUpdateConcurrencyException("Concurrency conflict"));
 
-        // Act & Assert
+        // Act
         Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         await action.Should().ThrowAsync<UnauthorizedException>()
-            .WithMessage("Session compromise detected (concurrent access). Please log in again.");
+            .WithMessage("Concurrent session modification detected. Please log in again.");
     }
 
     [Fact]
-    public async Task Handle_WhenValid_ShouldRotateTokensAndSaveChanges()
+    public async Task Handle_WhenValidAndPastThrottlingThreshold_ShouldRotateTokensAndExtendSession()
     {
         // Arrange
         var command = new RefreshSessionCommand("valid_raw_token");
         var hashedToken = "hashed_valid_token";
-        var sessionId = Guid.NewGuid();
 
         var user = DomainTestFactory.CreateActiveUser();
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime);
+        var originalExpiresAt = session.ExpiresAt;
 
-        var oldToken = DomainTestFactory.CreateUserToken(
-            userId: user.Id,
-            sessionId: sessionId,
-            isConsumed: false,
-            hash: hashedToken);
+        var token = DomainTestFactory.CreateUserToken(user.Id, session.Id, hash: hashedToken, createdAt: _testStartTime);
+        var tokensDbSetMock = new List<UserToken> { token }.BuildMockDbSet();
 
-        var tokensDbSetMock = new List<UserToken> { oldToken }.BuildMockDbSet();
-
-        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
-        _dbContextMock.Setup(c => c.UserTokens).Returns(tokensDbSetMock.Object);
-        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+        // Advance time past the 5-minute ActivityUpdateThreshold
+        _timeProvider.Advance(TimeSpan.FromMinutes(10));
+        var now = _timeProvider.GetUtcNow();
 
         _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
-        _tokenGeneratorMock.Setup(x => x.GenerateJwt(user, sessionId)).Returns("new_jwt");
+        _tokenGeneratorMock.Setup(x => x.GenerateJwt(user, session.Id)).Returns("new_jwt");
         _tokenGeneratorMock.Setup(x => x.GenerateSecureToken()).Returns("new_raw_refresh");
         _tokenHashServiceMock.Setup(x => x.HashToken("new_raw_refresh")).Returns("new_hashed_refresh");
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(tokensDbSetMock.Object);
+        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-        result.AccessToken.Should().Be("new_jwt");
-        result.RefreshToken.Should().Be("new_raw_refresh");
+        token.IsActive(now).Should().BeFalse();
+        session.ExpiresAt.Should().BeAfter(originalExpiresAt);
+        session.LastSeenAt.Should().Be(now);
 
-        // Verify the old token was consumed
-        oldToken.IsActive(_timeProvider).Should().BeFalse();
-
-        // Verify a new token was added to the DbSet
-        tokensDbSetMock.Verify(m => m.Add(It.Is<UserToken>(t =>
-            t.TokenHash == "new_hashed_refresh" &&
-            t.SessionId == sessionId &&
-            t.UserId == user.Id)), Times.Once);
-
-        // Verify database commit
+        // Explicitly verify that the newly generated token is being added to the database tracking
+        tokensDbSetMock.Verify(x => x.Add(It.IsAny<UserToken>()), Times.Once);
         _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenExactlyAtActivityThreshold_ShouldRefreshSession()
+    {
+        // Arrange
+        var command = new RefreshSessionCommand("valid_raw_token");
+        var hashedToken = "hashed_valid_token";
+
+        var user = DomainTestFactory.CreateActiveUser();
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime);
+        var originalExpiresAt = session.ExpiresAt;
+
+        var token = DomainTestFactory.CreateUserToken(user.Id, session.Id, hash: hashedToken, createdAt: _testStartTime);
+        var tokensDbSetMock = new List<UserToken> { token }.BuildMockDbSet();
+
+        // Advance exactly 5 minutes (boundary test)
+        _timeProvider.Advance(TimeSpan.FromMinutes(5));
+        var now = _timeProvider.GetUtcNow();
+
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
+        _tokenGeneratorMock.Setup(x => x.GenerateJwt(user, session.Id)).Returns("new_jwt");
+        _tokenGeneratorMock.Setup(x => x.GenerateSecureToken()).Returns("new_raw_refresh");
+        _tokenHashServiceMock.Setup(x => x.HashToken("new_raw_refresh")).Returns("new_hashed_refresh");
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(tokensDbSetMock.Object);
+        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        session.ExpiresAt.Should().BeAfter(originalExpiresAt);
+        session.LastSeenAt.Should().Be(now);
+    }
+
+    [Fact]
+    public async Task Handle_WhenValidButWithinThrottlingThreshold_ShouldRotateTokensWithoutExtendingSession()
+    {
+        // Arrange
+        var command = new RefreshSessionCommand("valid_raw_token");
+        var hashedToken = "hashed_valid_token";
+
+        var user = DomainTestFactory.CreateActiveUser();
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime);
+
+        // Stable references to initial state
+        var originalExpiresAt = session.ExpiresAt;
+        var originalLastSeenAt = session.LastSeenAt;
+
+        var token = DomainTestFactory.CreateUserToken(user.Id, session.Id, hash: hashedToken, createdAt: _testStartTime);
+        var tokensDbSetMock = new List<UserToken> { token }.BuildMockDbSet();
+
+        // Advance time by ONLY 2 minutes (Does not hit threshold)
+        _timeProvider.Advance(TimeSpan.FromMinutes(2));
+
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
+        _tokenGeneratorMock.Setup(x => x.GenerateJwt(user, session.Id)).Returns("new_jwt");
+        _tokenGeneratorMock.Setup(x => x.GenerateSecureToken()).Returns("new_raw_refresh");
+        _tokenHashServiceMock.Setup(x => x.HashToken("new_raw_refresh")).Returns("new_hashed_refresh");
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(tokensDbSetMock.Object);
+        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        // Expiration and telemetry must remain exactly the same due to throttling
+        session.ExpiresAt.Should().Be(originalExpiresAt);
+        session.LastSeenAt.Should().NotBeNull();
+        session.LastSeenAt.Should().Be(originalLastSeenAt);
+    }
+
+    [Fact]
+    public async Task Handle_WhenLastSeenAtIsNull_ShouldRefreshSession()
+    {
+        // Arrange
+        var command = new RefreshSessionCommand("valid_raw_token");
+        var hashedToken = "hashed_valid_token";
+
+        var user = DomainTestFactory.CreateActiveUser();
+
+        // Simulates old data schema before LastSeenAt was strictly tracked (database row with NULL)
+        var session = DomainTestFactory.CreateUserSession(user.Id, createdAt: _testStartTime, simulateLegacyNullLastSeen: true);
+
+        var token = DomainTestFactory.CreateUserToken(user.Id, session.Id, hash: hashedToken, createdAt: _testStartTime);
+        var tokensDbSetMock = new List<UserToken> { token }.BuildMockDbSet();
+
+        // Advance only 1 minute (below threshold, but null should bypass threshold logic)
+        _timeProvider.Advance(TimeSpan.FromMinutes(1));
+        var now = _timeProvider.GetUtcNow();
+
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
+        _tokenGeneratorMock.Setup(x => x.GenerateJwt(user, session.Id)).Returns("new_jwt");
+        _tokenGeneratorMock.Setup(x => x.GenerateSecureToken()).Returns("new_raw_refresh");
+        _tokenHashServiceMock.Setup(x => x.HashToken("new_raw_refresh")).Returns("new_hashed_refresh");
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(tokensDbSetMock.Object);
+        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        session.LastSeenAt.Should().Be(now);
+    }
+
+    [Fact]
+    public async Task Handle_WhenRefreshingNearAbsoluteCap_ShouldCapNewRefreshTokenAndSessionExpiry()
+    {
+        // Arrange
+        var command = new RefreshSessionCommand("valid_raw_token");
+        var hashedToken = "hashed_valid_token";
+
+        var user = DomainTestFactory.CreateActiveUser();
+        var absoluteExpiry = _testStartTime.AddDays(30);
+
+        // Create a strict, legally valid session nearing its absolute limit
+        var initialSlidingExpiry = _testStartTime.AddDays(29);
+        var session = new UserSession(user.Id, _testStartTime, initialSlidingExpiry, absoluteExpiry);
+
+        // Jump time to Day 28
+        var day28 = _testStartTime.AddDays(28);
+        _timeProvider.SetUtcNow(day28);
+
+        var token = UserToken.CreateRefreshToken(user.Id, session.Id, hashedToken, day28, day28.AddDays(7));
+        var tokensDbSetMock = new List<UserToken> { token }.BuildMockDbSet();
+
+        _tokenHashServiceMock.Setup(x => x.HashToken(command.RefreshToken)).Returns(hashedToken);
+        _tokenGeneratorMock.Setup(x => x.GenerateJwt(user, session.Id)).Returns("new_jwt");
+        _tokenGeneratorMock.Setup(x => x.GenerateSecureToken()).Returns("new_raw_refresh");
+        _tokenHashServiceMock.Setup(x => x.HashToken("new_raw_refresh")).Returns("new_hashed_refresh");
+
+        _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserSessions).Returns(new List<UserSession> { session }.BuildMockDbSet().Object);
+        _dbContextMock.Setup(c => c.UserTokens).Returns(tokensDbSetMock.Object);
+        _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        // Session RefreshActivity should try to add 7 days to Day 28 (Day 35), but cap at AbsoluteExpiry (Day 30)
+        session.ExpiresAt.Should().Be(absoluteExpiry);
+
+        // Application handler must also cap the Refresh Token to ensure it matches the hard session death
+        result.RefreshTokenExpiresAt.Should().Be(absoluteExpiry);
     }
 }
