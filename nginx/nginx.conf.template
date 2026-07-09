@@ -5,11 +5,20 @@ events {
 }
 
 http {
-    # --- 1. DYNAMIC RATE LIMITING ZONES ---
-    # Values injected securely at runtime via envsubst
-    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=${NGINX_API_RATE};
-    limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=${NGINX_AUTH_RATE};
-    limit_req_zone $binary_remote_addr zone=hangfire_limit:10m rate=${NGINX_HANGFIRE_RATE};
+    # --- 1. CLIENT IP FALLBACK MAPPING (Azure vs Local Dev) ---
+    # Extracts the first client IP from trusted X-Forwarded-For header lists.
+    # WARNING: Requires Azure to be the only public entry point. If exposed directly
+    # to the internet, clients can spoof this header.
+    map $http_x_forwarded_for $client_real_ip {
+        "~^(?<first_ip>[^,]+)"  $first_ip;
+        default                 $remote_addr;
+    }
+
+    # --- 2. DYNAMIC RATE LIMITING ZONES ---
+    limit_req_zone $client_real_ip zone=api_limit:10m rate=${NGINX_API_RATE};
+    limit_req_zone $client_real_ip zone=auth_limit:10m rate=${NGINX_AUTH_RATE};
+    limit_req_zone $client_real_ip zone=hangfire_limit:10m rate=${NGINX_HANGFIRE_RATE};
+    limit_req_zone $client_real_ip zone=grafana_limit:10m rate=${NGINX_GRAFANA_RATE};
 
     server_tokens off;
 
@@ -17,73 +26,128 @@ http {
         server api:8080;
     }
 
-    # --- 2. WEBSOCKET MAPPING ---
-    # Automatically resolves the correct Connection header based on the incoming request type
+    upstream grafana_backend {
+        server grafana:3000;
+    }
+
+    # --- 3. WEBSOCKET MAPPING ---
     map $http_upgrade $connection_upgrade {
         default upgrade;
         ''      close;
     }
 
+    # --- 4. PROTOCOL FALLBACK MAPPING (Azure vs Local Dev) ---
+    map $http_x_forwarded_proto $forwarded_proto {
+        default $http_x_forwarded_proto;
+        ""      $scheme;
+    }
+
     server {
-        # Azure App Service routes external traffic to the container on port 80.
         listen 80;
+
+        # Allow larger payloads (e.g., uploading PDFs or CSVs in CRM)
+        client_max_body_size 50m;
+
+        # Use HTTP/1.1 for all upstreams by default (required for WebSockets and keep-alive)
+        proxy_http_version 1.1;
         
-        # --- 3. GLOBAL PROXY HEADERS (DRY Principle) ---
-        # These headers are inherited by all location blocks below unless overridden
+        # --- 5. GLOBAL PROXY HEADERS ---
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Real-IP $client_real_ip; # Sends the client IP extracted from X-Forwarded-For. Assumes Azure is the trusted public entry point.
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # --- 4. GLOBAL API PROXYING (REST & SIGNALR) ---
-        location / {
-            limit_req zone=api_limit burst=${NGINX_API_BURST} nodelay;
-            
+        proxy_set_header X-Forwarded-Proto $forwarded_proto; 
+        proxy_set_header X-Forwarded-Host $host;
+
+        # ==========================================
+        # ROUTING CONFIGURATION (Longest prefix first)
+        # ==========================================
+
+        # --- 6. SIGNALR WEBSOCKETS (No Rate Limit) ---
+        location /hubs/ {
             proxy_pass http://api_backend;
+            proxy_buffering off;
             
-            # Dynamically sets Connection header for HTTP and WebSocket requests
-            proxy_http_version 1.1;
+            # Prevent NGINX from dropping idle WebSocket connections (default is 60s)
+            proxy_read_timeout 3600s;
+            proxy_send_timeout 3600s;
+
+            # Explicit headers override required for WebSockets
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $client_real_ip;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $forwarded_proto;
+            proxy_set_header X-Forwarded-Host $host;
+
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection $connection_upgrade;
         }
 
-        # --- 5. TIGHTENED SECURITY FOR IDENTITY ENDPOINTS ---
-        
-        # Standard API Authentication
-        location /api/auth/ {
-            limit_req zone=auth_limit burst=${NGINX_AUTH_BURST} nodelay;
-            proxy_pass http://api_backend;
-        }
-
-        # Infrastructure Ops (Dashboard) Authentication
+        # --- 7. TIGHTENED SECURITY FOR IDENTITY ENDPOINTS ---
         location /api/ops/auth/ {
             limit_req zone=auth_limit burst=${NGINX_AUTH_BURST} nodelay;
             proxy_pass http://api_backend;
         }
 
-        # --- 6. HANGFIRE DASHBOARD SECURITY (EDGE BOUNDARY) ---
-        
-        # Canonicalize /hangfire -> /hangfire/ to keep dashboard URLs consistent.
+        location /api/auth/ {
+            limit_req zone=auth_limit burst=${NGINX_AUTH_BURST} nodelay;
+            proxy_pass http://api_backend;
+        }
+
+        # --- 8. STANDARD REST API (Rate Limited) ---
+        location /api/ {
+            limit_req zone=api_limit burst=${NGINX_API_BURST} nodelay;
+            proxy_pass http://api_backend;
+        }
+
+        # --- 9. HANGFIRE DASHBOARD SECURITY ---
         location = /hangfire { 
             return 301 /hangfire/; 
         }
 
-        # Strict prefix match (^~) prevents accidental matches like /hangfire-fake
         location ^~ /hangfire/ {
-            # Traffic shaping for polling (no 'nodelay')
             limit_req zone=hangfire_limit burst=${NGINX_HANGFIRE_BURST};
-            
-            # STRICT NETWORK BOUNDARY
-            allow 172.21.0.0/16;    # Allow Docker bridge network (local/internal)
-            # allow 203.0.113.50;   # Allow corporate VPN
-            deny all;
-
             proxy_pass http://api_backend;
+        }
+
+        # --- 10. GRAFANA OBSERVABILITY DASHBOARD ---
+        location = /grafana { 
+            return 301 /grafana/; 
+        }
+
+        # Grafana Live requires WebSockets and unbuffered proxying
+        location /grafana/api/live/ {
+            proxy_buffering off;
+            proxy_pass http://grafana_backend;
             
-            # Hangfire dashboard also uses WebSockets for live metrics updates
-            proxy_http_version 1.1;
+            # Prevent NGINX from dropping idle WebSocket connections
+            proxy_read_timeout 3600s;
+            proxy_send_timeout 3600s;
+
+            # Explicit headers override required for WebSockets
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $client_real_ip;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $forwarded_proto;
+            proxy_set_header X-Forwarded-Host $host;
+
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection $connection_upgrade;
+        }
+
+        # Rate limit only the Grafana API to prevent blocking UI assets
+        location /grafana/api/ {
+            limit_req zone=grafana_limit burst=${NGINX_GRAFANA_BURST} nodelay;
+            proxy_pass http://grafana_backend;
+        }
+
+        # Serve Grafana UI assets (CSS, JS) without rate limiting
+        location /grafana/ {
+            proxy_pass http://grafana_backend;
+        }
+
+        # --- 11. CATCH-ALL FOR SWAGGER & STATIC ASSETS ---
+        location / {
+            proxy_pass http://api_backend;
         }
     }
 }

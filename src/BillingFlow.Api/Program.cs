@@ -83,10 +83,13 @@ try
         // Smart leveling: 5xx is Error, 4xx is Warning, others Information
         options.GetLevel = (httpContext, elapsed, ex) =>
         {
-            if (ex != null || httpContext.Response.StatusCode > 499)
+            if (ex != null)
                 return LogEventLevel.Error;
 
-            if (httpContext.Response.StatusCode > 399)
+            if (httpContext.Response.StatusCode >= 500)
+                return LogEventLevel.Error;
+
+            if (httpContext.Response.StatusCode >= 400)
                 return LogEventLevel.Warning;
 
             return LogEventLevel.Information;

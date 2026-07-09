@@ -25,7 +25,7 @@ BillingFlow follows **Clean Architecture** with **Vertical Slice** feature organ
 - **DDD** - aggregates such as `Invoice`, `Payment`, `Client`, `ProvidedService`, `AppUser`, and `UserSession` protect invariants and emit domain events.
 - **Transactional Outbox & Idempotency** - domain changes and integration events are persisted within the same database transaction, reducing the risk of lost side effects. A concurrent-safe background relay worker processes pending messages asynchronously, routing them to an idempotent consumer flow that uses lease-based tokens to coordinate dispatch ownership while supporting event fan-out.
 - **Post-Save Notification Queue** - decouples non-critical external I/O from the database transaction boundary. Best-effort real-time notifications (SignalR) are buffered in memory and processed after `SaveChangesAsync` succeeds, helping prevent slow network connections or Redis operations from blocking primary database connections.
-- **Edge Gateway & Security** - NGINX acts as a reverse proxy for API and SignalR traffic, with forwarded headers restricted to trusted proxy networks.
+- **Edge Gateway & Security** - NGINX acts as the single entry point and reverse proxy for API, SignalR traffic, and infrastructure dashboards (Hangfire, Grafana). Internal observability services (Loki, Prometheus, Tempo) remain isolated within the Docker network, and forwarded headers are restricted to trusted proxy boundaries.
 - **Rate Limiting** - layered rate limiting combines a global API limiter with endpoint-specific policies for sensitive workflows.
 - **Idempotency & Concurrency** - Stripe webhook delivery, payment attempts, and token handling are protected with unique constraints, row versions, and explicit state transitions.
 - **Unified Authentication & Session Validation** - API consumers (JWT) and Dashboard Ops (Secure Cookies) share a unified identity architecture. Both schemes utilize a high-performance, distributed cache-aside validation layer to enforce real-time session revocation.
@@ -160,10 +160,12 @@ http://localhost/swagger/index.html
 Paste a raw JWT into Swagger's **Authorize** dialog. The UI injects the `Bearer ` prefix automatically.
 
 ### 5. Observability Dashboards (Grafana)
-Navigate to the local Grafana instance to monitor Logs, Metrics, and Traces:
+Loki, Prometheus, and Tempo are exposed only on the internal Docker network. Grafana is accessed through the NGINX edge gateway under the `/grafana/` sub-path. This keeps observability components off the host network while presenting a single public entry point through NGINX.
+
+Navigate to the Grafana instance to monitor logs, metrics, and traces:
 
 ```text
-http://localhost:3000
+http://localhost/grafana/
 ```
 
 * Username: admin
