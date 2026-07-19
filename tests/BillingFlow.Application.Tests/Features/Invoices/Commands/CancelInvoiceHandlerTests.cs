@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
 using BillingFlow.Application.Features.Invoices.Commands.CancelInvoice;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
@@ -31,7 +31,7 @@ public class CancelInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenInvoiceDoesNotExist_ShouldThrowNotFoundException()
+    public async Task Handle_WhenInvoiceDoesNotExist_ShouldReturnNotFoundError()
     {
         // Arrange
         var invoiceId = Guid.NewGuid();
@@ -41,11 +41,12 @@ public class CancelInvoiceHandlerTests
         var invoices = new List<Invoice>();
         _dbContextMock.Setup(c => c.Invoices).Returns(invoices.BuildMockDbSet().Object);
 
-        // Act & Assert
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
 
-        await action.Should().ThrowAsync<NotFoundException>()
-            .WithMessage($"Invoice with ID {invoiceId} could not be found.");
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Invoices.NotFound(invoiceId));
 
         _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -67,9 +68,10 @@ public class CancelInvoiceHandlerTests
         _dbContextMock.Setup(c => c.Invoices).Returns(invoices.BuildMockDbSet().Object);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
         invoice.Status.Should().Be(InvoiceStatus.Canceled);
         _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

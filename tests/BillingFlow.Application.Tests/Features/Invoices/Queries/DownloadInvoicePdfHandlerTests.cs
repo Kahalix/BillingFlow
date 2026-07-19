@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Features.Invoices.Common;
 using BillingFlow.Application.Features.Invoices.Queries.DownloadInvoicePdf;
 using BillingFlow.Application.Interfaces;
@@ -31,9 +32,10 @@ public class DownloadInvoicePdfHandlerTests
         var expectedPdfBytes = new byte[] { 1, 2, 3, 4, 5 };
 
         var dataProviderMock = new Mock<IInvoiceDataProvider>();
+
         dataProviderMock
             .Setup(p => p.GetInvoiceDetailsAsync(invoiceId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(model);
+            .ReturnsAsync(Result.Success(model));
 
         var rendererMock = new Mock<IInvoicePdfRenderer>();
         rendererMock
@@ -46,10 +48,11 @@ public class DownloadInvoicePdfHandlerTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Content.Should().BeEquivalentTo(expectedPdfBytes);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.Content.Should().BeEquivalentTo(expectedPdfBytes);
 
         // Ensure slashes are replaced with underscores
-        result.FileName.Should().Be("Invoice_INV_2026_05_001.pdf");
+        result.Value.FileName.Should().Be("Invoice_INV_2026_05_001.pdf");
     }
 }

@@ -3,11 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,9 +17,9 @@ namespace BillingFlow.Application.Features.Payments.Commands.ProcessPaymentCompl
 public class ProcessPaymentCompletedHandler(
     IApplicationDbContext context,
     TimeProvider timeProvider,
-    ILogger<ProcessPaymentCompletedHandler> logger) : IRequestHandler<ProcessPaymentCompletedCommand>
+    ILogger<ProcessPaymentCompletedHandler> logger) : ICommandHandler<ProcessPaymentCompletedCommand>
 {
-    public async Task Handle(ProcessPaymentCompletedCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(ProcessPaymentCompletedCommand request, CancellationToken cancellationToken)
     {
         // 1. COMPOSITE KEY SEARCH: Locate the attempt by Provider + Reference
         // Protects against reference overlapping across different payment providers (e.g. PayPal vs Stripe)
@@ -32,14 +32,14 @@ public class ProcessPaymentCompletedHandler(
         if (attempt == null)
         {
             logger.LogWarning("Webhook received for an unknown payment attempt (Provider: Stripe, Reference: {Reference})", request.ProviderReference);
-            return;
+            return Result.Success();
         }
 
         // Memory-level Idempotency Check: Fast pass if already locally modified
         if (attempt.Status == PaymentStatus.Succeeded)
         {
             logger.LogInformation("Payment attempt {AttemptId} was already marked as succeeded. Ignoring duplicate webhook.", attempt.Id);
-            return;
+            return Result.Success();
         }
 
         // 2. FETCH LINKED AGGREGATE ROOT
@@ -49,7 +49,7 @@ public class ProcessPaymentCompletedHandler(
         if (invoice == null)
         {
             logger.LogCritical("Payment attempt succeeded, but related Invoice {InvoiceId} is missing from the database!", request.InvoiceId);
-            return;
+            return Result.Success();
         }
 
         var now = timeProvider.GetUtcNow();
@@ -94,6 +94,9 @@ public class ProcessPaymentCompletedHandler(
             // We only swallow the exception if it was explicitly the idempotency log that clashed.
             // We log it and swallow the exception to return HTTP 200 OK to Stripe, signaling that the event is taken care of.
             logger.LogInformation("Concurrent webhook race condition detected for Stripe Event {EventId}. Duplicate transaction safely aborted and rolled back.", request.EventId);
+            return Result.Success();
         }
+
+        return Result.Success();
     }
 }

@@ -2,13 +2,13 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Features.Identity.IntegrationEvents;
 using BillingFlow.Application.Identity;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -26,11 +26,11 @@ public class RequestPasswordResetHandler(
     IIntegrationEventPublisher eventPublisher,
     IOptions<IdentityOptions> options,
     TimeProvider timeProvider)
-    : IRequestHandler<RequestPasswordResetCommand>
+    : ICommandHandler<RequestPasswordResetCommand>
 {
     private readonly IdentityOptions _options = options.Value;
 
-    public async Task Handle(RequestPasswordResetCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(RequestPasswordResetCommand request, CancellationToken cancellationToken)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
@@ -41,7 +41,7 @@ public class RequestPasswordResetHandler(
         // We also don't allow password resets for suspended/inactive accounts.
         if (user is null || user.Status != UserStatus.Active)
         {
-            return;
+            return Result.Success();
         }
 
         // 1. Generate a secure URL-safe token (Not a JWT)
@@ -67,5 +67,7 @@ public class RequestPasswordResetHandler(
 
         // 4. Commit everything atomically
         await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 }

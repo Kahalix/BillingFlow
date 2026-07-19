@@ -1,8 +1,8 @@
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
-using BillingFlow.Domain.Exceptions;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -18,9 +18,9 @@ public class ResetPasswordHandler(
     ITokenHashService tokenHashService,
     IPasswordHasher passwordHasher,
     TimeProvider timeProvider)
-    : IRequestHandler<ResetPasswordCommand>
+    : ICommandHandler<ResetPasswordCommand>
 {
-    public async Task Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var incomingTokenHash = tokenHashService.HashToken(request.Token);
@@ -31,7 +31,7 @@ public class ResetPasswordHandler(
 
         if (user is null || user.Status == UserStatus.Suspended)
         {
-            ThrowInvalidTokenException();
+            return Result.Failure(Errors.Tokens.InvalidOrExpired);
         }
 
         // 2. Find the active reset token for this user
@@ -44,7 +44,7 @@ public class ResetPasswordHandler(
         // 3. Verify token validity
         if (resetToken is null || !resetToken.IsActive(now))
         {
-            ThrowInvalidTokenException();
+            return Result.Failure(Errors.Tokens.InvalidOrExpired);
         }
 
         // 4. Update password securely
@@ -55,10 +55,7 @@ public class ResetPasswordHandler(
         resetToken!.MarkAsConsumed(now);
 
         await context.SaveChangesAsync(cancellationToken);
-    }
 
-    private static void ThrowInvalidTokenException()
-    {
-        throw new DomainException("The password reset token is invalid or has expired.");
+        return Result.Success();
     }
 }

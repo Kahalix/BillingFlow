@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
 using BillingFlow.Application.Features.ProvidedServices.Commands.UpdateProvidedService;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Application.Tests.Helpers;
@@ -34,19 +34,21 @@ public class UpdateProvidedServiceHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenServiceDoesNotExist_ShouldThrowNotFoundException()
+    public async Task Handle_WhenServiceDoesNotExist_ShouldReturnNotFoundError()
     {
         // Arrange
-        var command = new UpdateProvidedServiceCommand(Guid.NewGuid(), "New Desc", 200m, DateTimeOffset.UtcNow);
+        var serviceId = Guid.NewGuid();
+        var command = new UpdateProvidedServiceCommand(serviceId, "New Desc", 200m, DateTimeOffset.UtcNow);
 
         _dbContextMock.Setup(c => c.ProvidedServices)
             .Returns(new List<ProvidedService>().BuildMockDbSet().Object);
 
-        // Act & Assert
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
 
-        await action.Should().ThrowAsync<NotFoundException>()
-            .WithMessage("Provided service not found.");
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.ProvidedServices.NotFound(serviceId));
     }
 
     [Fact]
@@ -63,11 +65,13 @@ public class UpdateProvidedServiceHandlerTests
             .Returns(new List<ProvidedService> { service }.BuildMockDbSet().Object);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
         service.Amount.Should().Be(newAmount);
         service.Description.Should().Be("Updated Scope");
+
         _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -84,9 +88,10 @@ public class UpdateProvidedServiceHandlerTests
             .Returns(new List<ProvidedService> { billedService }.BuildMockDbSet().Object);
 
         // Act & Assert
+        // Domain layer enforces invariants. Application layer does not catch this by design,
+        // so we expect the pure DomainException to bubble up to the global exception handler.
         Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
 
-        // Domain layer enforces invariants. Application layer should not swallow this.
         await action.Should().ThrowAsync<DomainException>()
             .WithMessage("Cannot update a service in Billed state.");
 

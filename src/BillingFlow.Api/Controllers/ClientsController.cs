@@ -23,7 +23,7 @@ namespace BillingFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ClientsController(ISender sender) : ControllerBase
+public class ClientsController(ISender sender) : ApiControllerBase
 {
     /// <summary>
     /// Self-Service: Retrieves the client profile linked to the currently authenticated user.
@@ -37,7 +37,7 @@ public class ClientsController(ISender sender) : ControllerBase
     public async Task<IActionResult> GetMyClientDetails(CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetMyClientDetailsQuery(), cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ public class ClientsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(query, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public class ClientsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetClientDetailsQuery(id), cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public class ClientsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetClientBalanceQuery(id), cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -108,9 +108,9 @@ public class ClientsController(ISender sender) : ControllerBase
         [FromBody] CreateClientCommand command,
         CancellationToken cancellationToken)
     {
-        var response = await sender.Send(command, cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
-        return CreatedAtAction(nameof(GetClientDetails), new { id = response.ClientId }, response);
+        return HandleResult(result, response => CreatedAtAction(nameof(GetClientDetails), new { id = response.ClientId }, response));
     }
 
     /// <summary>
@@ -139,8 +139,8 @@ public class ClientsController(ISender sender) : ControllerBase
             request.Country
         );
 
-        await sender.Send(command, cancellationToken);
-        return NoContent();
+        var result = await sender.Send(command, cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -157,10 +157,10 @@ public class ClientsController(ISender sender) : ControllerBase
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new SuspendClientCommand(id), cancellationToken);
+        var result = await sender.Send(new SuspendClientCommand(id), cancellationToken);
 
         // REST Best Practice: Return 204 No Content for a successful update that returns no body.
-        return NoContent();
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -177,8 +177,8 @@ public class ClientsController(ISender sender) : ControllerBase
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new ActivateClientCommand(id), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new ActivateClientCommand(id), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -195,8 +195,8 @@ public class ClientsController(ISender sender) : ControllerBase
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new ArchiveClientCommand(id), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new ArchiveClientCommand(id), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -213,8 +213,8 @@ public class ClientsController(ISender sender) : ControllerBase
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new RestoreClientCommand(id), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new RestoreClientCommand(id), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -234,8 +234,8 @@ public class ClientsController(ISender sender) : ControllerBase
         [FromBody] LinkClientUserRequest request,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new LinkClientUserCommand(id, request.UserId), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new LinkClientUserCommand(id, request.UserId), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -252,8 +252,8 @@ public class ClientsController(ISender sender) : ControllerBase
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new UnlinkClientUserCommand(id), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new UnlinkClientUserCommand(id), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -279,13 +279,12 @@ public class ClientsController(ISender sender) : ControllerBase
             request.PerformedAt
         );
 
-        var serviceId = await sender.Send(command, cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
         // CreatedAtRoute mapping to the named route in ProvidedServicesController
-        return CreatedAtRoute(
+        return HandleResult(result, serviceId => CreatedAtRoute(
             routeName: "GetProvidedServiceDetails",
             routeValues: new { id = serviceId },
-            value: new { Id = serviceId });
+            value: new { Id = serviceId }));
     }
-
 }

@@ -1,6 +1,5 @@
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Identity.Commands.ChangePassword;
 
@@ -11,4 +10,4 @@ namespace BillingFlow.Application.Features.Identity.Commands.ChangePassword;
 public record ChangePasswordCommand(
     string CurrentPassword,
     string NewPassword,
-    string ConfirmNewPassword) : IRequest, IAuthenticatedRequest;
+    string ConfirmNewPassword) : ICommand, IAuthenticatedRequest;

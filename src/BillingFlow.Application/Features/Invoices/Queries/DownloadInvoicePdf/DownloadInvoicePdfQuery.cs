@@ -1,8 +1,7 @@
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Invoices.Queries.DownloadInvoicePdf;
 
@@ -10,4 +9,4 @@ namespace BillingFlow.Application.Features.Invoices.Queries.DownloadInvoicePdf;
 /// Triggers the generation and retrieval of an invoice PDF document.
 /// Protected by the associated DownloadInvoicePdfPolicy.
 /// </summary>
-public record DownloadInvoicePdfQuery(Guid InvoiceId) : IRequest<InvoicePdfDto>, IRequirePolicy;
+public record DownloadInvoicePdfQuery(Guid InvoiceId) : IQuery<InvoicePdfDto>, IRequirePolicy;

@@ -1,9 +1,9 @@
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Features.Clients.Queries.GetClientDetails;
 using BillingFlow.Application.Features.Clients.Queries.Projections;
 using BillingFlow.Application.Interfaces;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -12,9 +12,9 @@ namespace BillingFlow.Application.Features.Clients.Queries.GetMyClientDetails;
 public class GetMyClientDetailsHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService)
-    : IRequestHandler<GetMyClientDetailsQuery, ClientDetailsResponse>
+    : IQueryHandler<GetMyClientDetailsQuery, ClientDetailsResponse>
 {
-    public async Task<ClientDetailsResponse> Handle(GetMyClientDetailsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<ClientDetailsResponse>> Handle(GetMyClientDetailsQuery request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId;
 
@@ -26,9 +26,9 @@ public class GetMyClientDetailsHandler(
 
         if (client is null)
         {
-            throw new NotFoundException("You do not have an associated client profile.");
+            return Result.Failure<ClientDetailsResponse>(Errors.Clients.ProfileNotFound);
         }
 
-        return client;
+        return Result.Success(client);
     }
 }

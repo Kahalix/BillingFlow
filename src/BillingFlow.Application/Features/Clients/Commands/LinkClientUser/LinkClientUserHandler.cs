@@ -1,29 +1,28 @@
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
-using BillingFlow.Domain.Exceptions;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Clients.Commands.LinkClientUser;
 
-public class LinkClientUserHandler(IApplicationDbContext context) : IRequestHandler<LinkClientUserCommand>
+public class LinkClientUserHandler(IApplicationDbContext context) : ICommandHandler<LinkClientUserCommand>
 {
-    public async Task Handle(LinkClientUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(LinkClientUserCommand request, CancellationToken cancellationToken)
     {
         // 1. Verify target user exists
         var userExists = await context.Users.AnyAsync(u => u.Id == request.UserId, cancellationToken);
         if (!userExists)
         {
-            throw new NotFoundException("The specified User ID does not exist.");
+            return Result.Failure(Errors.Users.NotFound(request.UserId));
         }
 
         // 2. Enforce global invariant: Target user cannot already be linked to another profile
         var userAlreadyLinked = await context.Clients.AnyAsync(c => c.UserId == request.UserId, cancellationToken);
         if (userAlreadyLinked)
         {
-            throw new DomainException("This user account is already linked to another client profile.");
+            return Result.Failure(Errors.Clients.UserAlreadyLinked);
         }
 
         // 3. Fetch target client profile
@@ -32,12 +31,14 @@ public class LinkClientUserHandler(IApplicationDbContext context) : IRequestHand
 
         if (client is null)
         {
-            throw new NotFoundException("Client profile could not be found.");
+            return Result.Failure(Errors.Clients.NotFound(request.ClientId));
         }
 
         // 4. Delegate to domain logic
         client.LinkUser(request.UserId);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 }

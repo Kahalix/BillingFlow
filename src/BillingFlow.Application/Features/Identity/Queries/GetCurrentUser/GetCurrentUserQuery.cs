@@ -1,6 +1,5 @@
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Identity.Queries.GetCurrentUser;
 
@@ -8,4 +7,4 @@ namespace BillingFlow.Application.Features.Identity.Queries.GetCurrentUser;
 /// Retrieves the full profile of the currently authenticated user.
 /// Requires the user to be logged in, but no specific permissions are needed.
 /// </summary>
-public record GetCurrentUserQuery : IRequest<CurrentUserProfileDto>, IAuthenticatedRequest;
+public record GetCurrentUserQuery : IQuery<CurrentUserProfileDto>, IAuthenticatedRequest;

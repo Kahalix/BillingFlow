@@ -22,7 +22,7 @@ public class InitiateUserEmailChangePolicy(
             .Select(u => new { u.Id, u.Role })
             .SingleOrDefaultAsync(u => u.Id == request.TargetUserId, cancellationToken);
 
-        if (targetUser is null) return true; // Let handler throw NotFound
+        if (targetUser is null) return true; // Let handler return NotFound result
 
         // CRITICAL BUSINESS RULE: Only Admin can change emails of non-customer roles
         if (targetUser.Role != Domain.Enums.Role.Customer && currentUserRole != Domain.Enums.Role.Admin)

@@ -3,13 +3,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Errors;
 using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
 using BillingFlow.Domain.Exceptions;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -20,9 +21,9 @@ public class CreatePaymentSessionHandler(
     IApplicationDbContext context,
     IStripeService stripeService,
     TimeProvider timeProvider,
-    ILogger<CreatePaymentSessionHandler> logger) : IRequestHandler<CreatePaymentSessionCommand, PaymentSessionResponse>
+    ILogger<CreatePaymentSessionHandler> logger) : ICommandHandler<CreatePaymentSessionCommand, PaymentSessionResponse>
 {
-    public async Task<PaymentSessionResponse> Handle(CreatePaymentSessionCommand request, CancellationToken cancellationToken)
+    public async Task<Result<PaymentSessionResponse>> Handle(CreatePaymentSessionCommand request, CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
         PaymentAttempt? reservationToProcess = null;
@@ -44,7 +45,7 @@ public class CreatePaymentSessionHandler(
             else if (activeAttempt.Status == PaymentStatus.Started)
             {
                 // Fully active, return the existing URL (Idempotency)
-                return new PaymentSessionResponse(activeAttempt.ProviderReference!, activeAttempt.CheckoutUrl!);
+                return Result.Success(new PaymentSessionResponse(activeAttempt.ProviderReference!, activeAttempt.CheckoutUrl!));
             }
             else if (activeAttempt.Status == PaymentStatus.Initializing)
             {
@@ -62,12 +63,12 @@ public class CreatePaymentSessionHandler(
             .Select(i => new { i.Id, i.Status, i.TotalAmount, i.PaidAmount })
             .SingleOrDefaultAsync(cancellationToken);
 
-        if (invoice is null) throw new NotFoundException($"Invoice with ID {request.InvoiceId} could not be found.");
-        if (invoice.Status == InvoiceStatus.Paid) throw new ForbiddenException("This invoice has already been fully paid.");
-        if (invoice.Status is InvoiceStatus.Draft or InvoiceStatus.Canceled) throw new ForbiddenException("Payment sessions can only be created for active, unpaid invoices.");
+        if (invoice is null) return Result.Failure<PaymentSessionResponse>(Errors.Payments.InvoiceNotFound(request.InvoiceId));
+        if (invoice.Status == InvoiceStatus.Paid) return Result.Failure<PaymentSessionResponse>(Errors.Payments.InvoiceFullyPaid);
+        if (invoice.Status is InvoiceStatus.Draft or InvoiceStatus.Canceled) return Result.Failure<PaymentSessionResponse>(Errors.Payments.InvoiceNotActive);
 
         var amountDue = invoice.TotalAmount - invoice.PaidAmount;
-        if (amountDue <= 0) throw new ForbiddenException("Amount due must be strictly greater than zero to initiate a payment.");
+        if (amountDue <= 0) return Result.Failure<PaymentSessionResponse>(Errors.Payments.InvalidAmount);
 
         var sessionExpiry = now.AddHours(24).AddMinutes(-5);
 
@@ -83,8 +84,7 @@ public class CreatePaymentSessionHandler(
             }
             catch (UniqueConstraintException)
             {
-                // Graceful degradation only on true race conditions
-                throw new DomainException("A payment session is already being created for this invoice. Please wait a moment and try again.");
+                return Result.Failure<PaymentSessionResponse>(Errors.Payments.SessionRaceCondition);
             }
         }
 
@@ -103,7 +103,7 @@ public class CreatePaymentSessionHandler(
             reservationToProcess.SetCheckoutDetails(providerReference, checkoutUrl);
             await context.SaveChangesAsync(cancellationToken);
 
-            return new PaymentSessionResponse(providerReference, checkoutUrl);
+            return Result.Success(new PaymentSessionResponse(providerReference, checkoutUrl));
         }
         catch (OperationCanceledException)
         {

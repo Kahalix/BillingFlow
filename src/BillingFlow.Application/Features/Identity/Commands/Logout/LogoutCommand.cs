@@ -1,6 +1,5 @@
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Identity.Commands.Logout;
 
@@ -8,4 +7,4 @@ namespace BillingFlow.Application.Features.Identity.Commands.Logout;
 /// Revokes the current active session.
 /// Requires an authenticated context to extract the SessionId.
 /// </summary>
-public record LogoutCommand : IRequest, IAuthenticatedRequest;
+public record LogoutCommand : ICommand, IAuthenticatedRequest;

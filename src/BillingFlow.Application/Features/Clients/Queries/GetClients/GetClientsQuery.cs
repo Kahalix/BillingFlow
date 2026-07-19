@@ -1,8 +1,7 @@
 using BillingFlow.Application.Authorization.Requirements;
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Application.Common.Models;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 namespace BillingFlow.Application.Features.Clients.Queries.GetClients;
 
@@ -15,4 +14,4 @@ public record GetClientsQuery(
     int PageSize = 10,
     string? SearchTerm = null,
     ClientStatus? Status = null
-) : IRequest<PaginatedList<ClientSummaryDto>>, IRequirePolicy;
+) : IQuery<PaginatedList<ClientSummaryDto>>, IRequirePolicy;

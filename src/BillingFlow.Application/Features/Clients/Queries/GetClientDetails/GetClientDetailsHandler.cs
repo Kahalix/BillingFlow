@@ -1,17 +1,17 @@
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Features.Clients.Queries.Projections;
 using BillingFlow.Application.Interfaces;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Clients.Queries.GetClientDetails;
 
 public class GetClientDetailsHandler(IApplicationDbContext context)
-    : IRequestHandler<GetClientDetailsQuery, ClientDetailsResponse>
+    : IQueryHandler<GetClientDetailsQuery, ClientDetailsResponse>
 {
-    public async Task<ClientDetailsResponse> Handle(GetClientDetailsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<ClientDetailsResponse>> Handle(GetClientDetailsQuery request, CancellationToken cancellationToken)
     {
         var client = await context.Clients
             .AsNoTracking()
@@ -21,9 +21,9 @@ public class GetClientDetailsHandler(IApplicationDbContext context)
 
         if (client is null)
         {
-            throw new NotFoundException("Client profile could not be found.");
+            return Result.Failure<ClientDetailsResponse>(Errors.Clients.NotFound(request.ClientId));
         }
 
-        return client;
+        return Result.Success(client);
     }
 }

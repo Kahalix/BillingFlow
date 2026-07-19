@@ -1,8 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Features.Payments.Commands.ProcessPaymentCompleted;
-using BillingFlow.Application.Interfaces;
+using BillingFlow.Application.Features.Payments.Commands.ProcessStripeWebhook;
 
 using MediatR;
 
@@ -14,9 +13,7 @@ namespace BillingFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class WebhooksController(
-    IStripeWebhookValidator webhookValidator,
-    IMediator mediator) : ControllerBase
+public class WebhooksController(ISender sender) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("stripe")]
@@ -34,21 +31,15 @@ public class WebhooksController(
 
         var signature = HttpContext.Request.Headers["Stripe-Signature"].ToString();
         if (string.IsNullOrEmpty(signature))
-            return BadRequest("Missing Stripe signature header.");
-
-        var paymentEvent = webhookValidator.ValidateAndParse(json, signature);
-
-        if (paymentEvent != null)
         {
-            var command = new ProcessPaymentCompletedCommand(
-                paymentEvent.EventId,
-                paymentEvent.InvoiceId,
-                paymentEvent.ProviderReference,
-                paymentEvent.Method);
-
-            await mediator.Send(command);
+            return BadRequest("Missing Stripe signature header.");
         }
 
+        // Push raw payload to the Application layer for cryptographic validation and processing
+        var command = new ProcessStripeWebhookCommand(json, signature);
+        await sender.Send(command);
+
+        // Always answer 200 OK to external webhook providers to prevent retry amplification attacks/loops
         return Ok();
     }
 }

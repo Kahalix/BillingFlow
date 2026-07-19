@@ -83,6 +83,9 @@ try
         // Smart leveling: 5xx is Error, 4xx is Warning, others Information
         options.GetLevel = (httpContext, elapsed, ex) =>
         {
+            //if (ex is FluentValidation.ValidationException)
+            //    return LogEventLevel.Warning;
+
             if (ex != null)
                 return LogEventLevel.Error;
 

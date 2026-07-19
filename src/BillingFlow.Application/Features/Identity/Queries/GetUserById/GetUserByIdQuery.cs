@@ -1,7 +1,6 @@
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Identity.Queries.GetUserById;
 
@@ -9,4 +8,4 @@ namespace BillingFlow.Application.Features.Identity.Queries.GetUserById;
 /// Retrieves detailed profile information for a specific user by their ID.
 /// Requires administrative read access.
 /// </summary>
-public record GetUserByIdQuery(Guid UserId) : IRequest<UserDetailsDto>, IRequirePermission;
+public record GetUserByIdQuery(Guid UserId) : IQuery<UserDetailsDto>, IRequirePermission;

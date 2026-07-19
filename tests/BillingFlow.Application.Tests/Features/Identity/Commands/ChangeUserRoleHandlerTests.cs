@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
 using BillingFlow.Application.Features.Identity.Commands.ChangeUserRole;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Application.Tests.Helpers;
@@ -33,7 +34,7 @@ public class ChangeUserRoleHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenUserDoesNotExist_ShouldThrowNotFoundException()
+    public async Task Handle_WhenUserDoesNotExist_ShouldReturnFailure()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -41,11 +42,12 @@ public class ChangeUserRoleHandlerTests
 
         _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser>().BuildMockDbSet().Object);
 
-        // Act & Assert
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
 
-        await action.Should().ThrowAsync<NotFoundException>()
-            .WithMessage("User not found.");
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Users.NotFound(userId));
 
         _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -66,9 +68,10 @@ public class ChangeUserRoleHandlerTests
         _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
         user.Role.Should().Be(Role.Accountant);
 
         // Type-safe domain event assertion

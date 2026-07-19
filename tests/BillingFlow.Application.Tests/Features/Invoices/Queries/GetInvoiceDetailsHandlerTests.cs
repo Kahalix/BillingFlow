@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Features.Invoices.Common;
 using BillingFlow.Application.Features.Invoices.Queries.GetInvoiceDetails;
 using BillingFlow.Application.Tests.Helpers;
@@ -26,9 +27,10 @@ public class GetInvoiceDetailsHandlerTests
         var expectedModel = ApplicationDtoFactory.CreateInvoiceDetailsModel(invoiceId);
 
         var dataProviderMock = new Mock<IInvoiceDataProvider>();
+
         dataProviderMock
             .Setup(p => p.GetInvoiceDetailsAsync(invoiceId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedModel);
+            .ReturnsAsync(Result.Success(expectedModel));
 
         var handler = new GetInvoiceDetailsHandler(dataProviderMock.Object);
 
@@ -36,7 +38,9 @@ public class GetInvoiceDetailsHandlerTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.Should().BeEquivalentTo(expectedModel);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeEquivalentTo(expectedModel);
+
         dataProviderMock.Verify(p => p.GetInvoiceDetailsAsync(invoiceId, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

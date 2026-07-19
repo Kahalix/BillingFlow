@@ -15,7 +15,7 @@ namespace BillingFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ReportsController(ISender sender) : ControllerBase
+public class ReportsController(ISender sender) : ApiControllerBase
 {
     /// <summary>
     /// Executes a highly optimized Stored Procedure to generate a monthly revenue report.
@@ -34,6 +34,6 @@ public class ReportsController(ISender sender) : ControllerBase
         var query = new GetMonthlyRevenueQuery(year, month);
         var result = await sender.Send(query, cancellationToken);
 
-        return Ok(result);
+        return HandleResult(result);
     }
 }

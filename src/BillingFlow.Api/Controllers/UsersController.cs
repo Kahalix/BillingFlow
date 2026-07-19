@@ -26,7 +26,7 @@ namespace BillingFlow.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController(ISender sender) : ControllerBase
+public class UsersController(ISender sender) : ApiControllerBase
 {
     /// <summary>
     /// Retrieves a paginated and optionally filtered list of system users.
@@ -41,7 +41,7 @@ public class UsersController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(query, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -58,7 +58,8 @@ public class UsersController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetUserByIdQuery(id), cancellationToken);
-        return Ok(result);
+
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -71,7 +72,7 @@ public class UsersController(ISender sender) : ControllerBase
     public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetCurrentUserQuery(), cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -86,8 +87,8 @@ public class UsersController(ISender sender) : ControllerBase
         [FromBody] ChangePasswordCommand command,
         CancellationToken cancellationToken)
     {
-        await sender.Send(command, cancellationToken);
-        return NoContent();
+        var result = await sender.Send(command, cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -104,8 +105,8 @@ public class UsersController(ISender sender) : ControllerBase
         [FromBody] InitiateMyEmailChangeCommand command,
         CancellationToken cancellationToken)
     {
-        await sender.Send(command, cancellationToken);
-        return Accepted();
+        var result = await sender.Send(command, cancellationToken);
+        return HandleResult(result, Accepted);
     }
 
     /// <summary>
@@ -121,8 +122,8 @@ public class UsersController(ISender sender) : ControllerBase
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new SuspendUserCommand(id), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new SuspendUserCommand(id), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -138,8 +139,8 @@ public class UsersController(ISender sender) : ControllerBase
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new ActivateUserCommand(id), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new ActivateUserCommand(id), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -157,8 +158,8 @@ public class UsersController(ISender sender) : ControllerBase
         [FromBody] ChangeUserRoleRequest request,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new ChangeUserRoleCommand(id, request.NewRole), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new ChangeUserRoleCommand(id, request.NewRole), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -172,14 +173,17 @@ public class UsersController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> InitiateUserEmailChange(
-        [FromRoute] Guid id,
-        [FromBody] ChangeUserEmailRequest request,
-        CancellationToken cancellationToken)
+         [FromRoute] Guid id,
+         [FromBody] ChangeUserEmailRequest request,
+         CancellationToken cancellationToken)
     {
         var command = new InitiateUserEmailChangeCommand(id, request.NewEmail);
 
-        await sender.Send(command, cancellationToken);
-        return Accepted();
+        var result = await sender.Send(command, cancellationToken);
+
+        // Centralized HTTP mapping handling success (202) and failures
+        return HandleResult(result, Accepted);
     }
 }

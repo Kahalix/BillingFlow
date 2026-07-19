@@ -1,8 +1,8 @@
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
-using BillingFlow.Domain.Exceptions;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -16,9 +16,9 @@ public class ConfirmEmailChangeHandler(
     IApplicationDbContext context,
     ITokenHashService tokenHashService,
     TimeProvider timeProvider)
-    : IRequestHandler<ConfirmEmailChangeCommand>
+    : ICommandHandler<ConfirmEmailChangeCommand>
 {
-    public async Task Handle(ConfirmEmailChangeCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(ConfirmEmailChangeCommand request, CancellationToken cancellationToken)
     {
         var incomingTokenHash = tokenHashService.HashToken(request.Token);
 
@@ -30,12 +30,15 @@ public class ConfirmEmailChangeHandler(
 
         if (resetToken is null || !resetToken.IsActive(now) || string.IsNullOrWhiteSpace(resetToken.Data))
         {
-            throw new DomainException("The email confirmation token is invalid or has expired.");
+            return Result.Failure(Errors.Tokens.InvalidOrExpired);
         }
 
         // 2. Fetch the associated user
-        var user = await context.Users.SingleOrDefaultAsync(u => u.Id == resetToken.UserId, cancellationToken)
-            ?? throw new DomainException("User not found.");
+        var user = await context.Users.SingleOrDefaultAsync(u => u.Id == resetToken.UserId, cancellationToken);
+        if (user is null)
+        {
+            return Result.Failure(Errors.Users.NotFound(resetToken.UserId));
+        }
 
         var newEmail = resetToken.Data;
 
@@ -43,7 +46,7 @@ public class ConfirmEmailChangeHandler(
         var emailAlreadyTaken = await context.Users.AnyAsync(u => u.Email == newEmail && u.Id != user.Id, cancellationToken);
         if (emailAlreadyTaken)
         {
-            throw new DomainException("This email address was registered by another user in the meantime.");
+            return Result.Failure(Errors.Tokens.ClaimedByOtherUser);
         }
 
         // 4. Change the email (This will dispatch the EmailChangedEvent!)
@@ -53,5 +56,7 @@ public class ConfirmEmailChangeHandler(
         resetToken.MarkAsConsumed(now);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 }

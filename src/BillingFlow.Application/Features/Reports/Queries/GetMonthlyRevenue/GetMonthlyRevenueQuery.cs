@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Reports.Queries.GetMonthlyRevenue;
 
-public record GetMonthlyRevenueQuery(int Year, int Month) : IRequest<IReadOnlyCollection<MonthlyRevenueDto>>, IRequirePermission;
+public record GetMonthlyRevenueQuery(int Year, int Month) : IQuery<IReadOnlyCollection<MonthlyRevenueDto>>, IRequirePermission;

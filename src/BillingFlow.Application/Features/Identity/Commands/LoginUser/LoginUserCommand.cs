@@ -1,6 +1,5 @@
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Identity.Commands.LoginUser;
 
@@ -10,4 +9,4 @@ namespace BillingFlow.Application.Features.Identity.Commands.LoginUser;
 /// </summary>
 public record LoginUserCommand(
     string Email,
-    string Password) : IRequest<AuthTokensResponse>, IPublicRequest;
+    string Password) : ICommand<AuthTokensResponse>, IPublicRequest;

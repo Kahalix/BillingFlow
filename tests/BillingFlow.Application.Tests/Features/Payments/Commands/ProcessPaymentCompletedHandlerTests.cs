@@ -38,7 +38,7 @@ public class ProcessPaymentCompletedHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenAttemptIsAlreadySucceeded_ShouldReturnWithoutSaving()
+    public async Task Handle_WhenAttemptIsAlreadySucceeded_ShouldReturnSuccessWithoutSaving()
     {
         // Arrange
         var command = new ProcessPaymentCompletedCommand("evt_123", Guid.NewGuid(), "cs_123", PaymentMethod.Card);
@@ -50,15 +50,16 @@ public class ProcessPaymentCompletedHandlerTests
         _dbContextMock.Setup(c => c.PaymentAttempts).Returns(new List<PaymentAttempt> { attempt }.BuildMockDbSet().Object);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        result.IsSuccess.Should().BeTrue(); // The handler returns Result.Success() for idempotency
         _dbContextMock.Verify(c => c.Invoices, Times.Never); // Fast pass, invoice shouldn't be queried
         _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WhenDatabaseThrowsUniqueConstraintOnStripeEventLog_ShouldSwallowExceptionGracefully()
+    public async Task Handle_WhenDatabaseThrowsUniqueConstraintOnStripeEventLog_ShouldSwallowExceptionAndReturnSuccess()
     {
         // Arrange
         var invoiceId = Guid.NewGuid();
@@ -80,9 +81,9 @@ public class ProcessPaymentCompletedHandlerTests
             .ThrowsAsync(new UniqueConstraintException("Conflict", nameof(StripeEventLog), new Exception()));
 
         // Act
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().NotThrowAsync(); // Exception should be swallowed
+        result.IsSuccess.Should().BeTrue(); // Exception should be swallowed gracefully to ACK the webhook
     }
 }

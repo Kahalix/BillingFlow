@@ -1,8 +1,7 @@
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Identity.Commands.SuspendUser;
 
-public record SuspendUserCommand(Guid UserId) : IRequest, IRequirePermission, IRequirePolicy;
+public record SuspendUserCommand(Guid UserId) : ICommand, IRequirePermission, IRequirePolicy;

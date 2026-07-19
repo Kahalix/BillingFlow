@@ -1,8 +1,7 @@
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.ProvidedServices.Commands.AddProvidedService;
 
@@ -11,4 +10,4 @@ public record AddProvidedServiceCommand(
     string Description,
     decimal Amount,
     DateTimeOffset PerformedAt
-) : IRequest<Guid>, IRequirePermission;
+) : ICommand<Guid>, IRequirePermission;

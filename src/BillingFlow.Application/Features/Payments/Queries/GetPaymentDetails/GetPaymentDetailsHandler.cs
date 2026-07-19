@@ -2,19 +2,19 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Payments.Queries.GetPaymentDetails;
 
 public class GetPaymentDetailsHandler(IApplicationDbContext context)
-    : IRequestHandler<GetPaymentDetailsQuery, PaymentDetailsResponse>
+    : IQueryHandler<GetPaymentDetailsQuery, PaymentDetailsResponse>
 {
-    public async Task<PaymentDetailsResponse> Handle(GetPaymentDetailsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaymentDetailsResponse>> Handle(GetPaymentDetailsQuery request, CancellationToken cancellationToken)
     {
         var response = await (from p in context.Payments.AsNoTracking()
                               join i in context.Invoices.AsNoTracking() on p.InvoiceId equals i.Id
@@ -34,8 +34,8 @@ public class GetPaymentDetailsHandler(IApplicationDbContext context)
                               )).SingleOrDefaultAsync(cancellationToken);
 
         if (response == null)
-            throw new NotFoundException($"Payment with ID {request.Id} could not be found.");
+            return Result.Failure<PaymentDetailsResponse>(Errors.Payments.NotFound(request.Id));
 
-        return response;
+        return Result.Success(response);
     }
 }

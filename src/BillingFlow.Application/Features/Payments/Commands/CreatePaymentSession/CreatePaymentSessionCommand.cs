@@ -1,8 +1,7 @@
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Payments.Commands.CreatePaymentSession;
 
@@ -13,4 +12,4 @@ public record CreatePaymentSessionCommand(
     Guid InvoiceId,
     string SuccessUrl,
     string CancelUrl
-) : IRequest<PaymentSessionResponse>, IRequirePolicy;
+) : ICommand<PaymentSessionResponse>, IRequirePolicy;

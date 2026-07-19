@@ -2,10 +2,10 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -15,15 +15,17 @@ public class DashboardLogoutHandler(
     IApplicationDbContext context,
     ISessionCacheService sessionCacheService,
     ICurrentUserService currentUserService,
-    TimeProvider timeProvider) : IRequestHandler<DashboardLogoutCommand>
+    TimeProvider timeProvider) : ICommandHandler<DashboardLogoutCommand>
 {
-    public async Task Handle(DashboardLogoutCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(DashboardLogoutCommand request, CancellationToken cancellationToken)
     {
         var currentSessionId = currentUserService.SessionId;
         var currentUserId = currentUserService.UserId;
 
         if (currentSessionId == Guid.Empty)
-            throw new UnauthorizedException("Invalid session context.");
+        {
+            return Result.Failure(Errors.Auth.InvalidSession);
+        }
 
         var now = timeProvider.GetUtcNow();
 
@@ -37,5 +39,7 @@ public class DashboardLogoutHandler(
         }
 
         await sessionCacheService.InvalidateSessionAsync(currentSessionId, cancellationToken);
+
+        return Result.Success();
     }
 }
