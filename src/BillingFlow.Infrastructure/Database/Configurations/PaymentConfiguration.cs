@@ -30,5 +30,23 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.Amount).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(p => p.Notes).HasMaxLength(1000);
         builder.Property(p => p.RowVersion).IsRowVersion();
+
+        // Invoice: Rule.None
+        builder.HasOne<Invoice>()
+            .WithMany()
+            .HasForeignKey(p => p.InvoiceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // PaymentAttempt: Rule.None
+        builder.HasOne<PaymentAttempt>()
+            .WithMany()
+            .HasForeignKey(p => p.PaymentAttemptId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Users (ReceivedByUserId): Rule.SetNull
+        builder.HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(p => p.ReceivedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

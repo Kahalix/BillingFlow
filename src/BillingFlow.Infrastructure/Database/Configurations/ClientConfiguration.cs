@@ -53,5 +53,10 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
         // 5. Inherited Concurrency Token configuration from Entity base class
         builder.Property(c => c.RowVersion)
             .IsRowVersion();
+
+        builder.HasOne<AppUser>()
+            .WithOne()
+            .HasForeignKey<Client>(c => c.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
