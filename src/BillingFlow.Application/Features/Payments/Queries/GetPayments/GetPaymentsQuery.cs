@@ -1,10 +1,9 @@
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Application.Common.Models;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 namespace BillingFlow.Application.Features.Payments.Queries.GetPayments;
 
@@ -15,4 +14,4 @@ public record GetPaymentsQuery(
     Guid? FilterByInvoiceId = null,
     PaymentProvider? FilterByProvider = null,
     PaymentMethod? FilterByMethod = null,
-    string? SearchTerm = null) : IRequest<PaginatedList<PaymentSummaryDto>>, IRequirePermission;
+    string? SearchTerm = null) : IQuery<PaginatedList<PaymentSummaryDto>>, IRequirePermission;

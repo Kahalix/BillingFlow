@@ -1,9 +1,8 @@
 using BillingFlow.Application.Authorization.Permissions;
 using BillingFlow.Application.Authorization.Requirements;
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Application.Common.Models;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 namespace BillingFlow.Application.Features.Identity.Queries.GetUsers;
 
@@ -15,4 +14,4 @@ public record GetUsersQuery(
     int PageNumber = 1,
     int PageSize = 10,
     Role? FilterByRole = null,
-    string? SearchTerm = null) : IRequest<PaginatedList<UserSummaryDto>>, IRequirePermission;
+    string? SearchTerm = null) : IQuery<PaginatedList<UserSummaryDto>>, IRequirePermission;

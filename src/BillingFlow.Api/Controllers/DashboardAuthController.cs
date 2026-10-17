@@ -23,7 +23,7 @@ namespace BillingFlow.Api.Controllers;
 [ApiController]
 [Route("api/ops/auth")]
 [Tags("Infrastructure Ops")]
-public class DashboardAuthController(ISender sender) : ControllerBase
+public class DashboardAuthController(ISender sender) : ApiControllerBase
 {
     [HttpPost("login")]
     [AllowAnonymous]
@@ -33,17 +33,24 @@ public class DashboardAuthController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Login(
-    [FromBody] DashboardLoginCommand command,
-    CancellationToken cancellationToken)
+        [FromBody] DashboardLoginCommand command,
+        CancellationToken cancellationToken)
     {
-        var response = await sender.Send(command, cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return HandleResult(result);
+        }
+
+        var response = result.Value;
 
         var claims = new[]
         {
-        new Claim(ClaimTypes.NameIdentifier, response.UserId.ToString()),
-        new Claim(ClaimTypes.Role, response.Role.ToString()),
-        new Claim(CustomClaimTypes.SessionId, response.SessionId.ToString())
-    };
+            new Claim(ClaimTypes.NameIdentifier, response.UserId.ToString()),
+            new Claim(ClaimTypes.Role, response.Role.ToString()),
+            new Claim(CustomClaimTypes.SessionId, response.SessionId.ToString())
+        };
 
         var identity = new ClaimsIdentity(claims, "AdminCookie");
         await HttpContext.SignInAsync("AdminCookie", new ClaimsPrincipal(identity));
@@ -56,7 +63,13 @@ public class DashboardAuthController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        await sender.Send(new DashboardLogoutCommand(), cancellationToken);
+        var result = await sender.Send(new DashboardLogoutCommand(), cancellationToken);
+
+        if (result.IsFailure)
+        {
+            // Return standarized ProblemDetails for base class
+            return HandleResult(result);
+        }
 
         await HttpContext.SignOutAsync("AdminCookie");
         return NoContent();

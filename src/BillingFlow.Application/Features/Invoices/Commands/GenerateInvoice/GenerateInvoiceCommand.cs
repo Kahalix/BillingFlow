@@ -1,8 +1,7 @@
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Invoices.Commands.GenerateInvoice;
 
@@ -10,4 +9,4 @@ public record GenerateInvoiceCommand(
     Guid ClientId,
     DateTimeOffset FromDate,
     DateTimeOffset ToDate
-) : IRequest<Guid>, IRequirePermission;
+) : ICommand<Guid>, IRequirePermission;

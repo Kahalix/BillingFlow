@@ -3,13 +3,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
-using BillingFlow.Domain.Exceptions;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -18,9 +17,9 @@ namespace BillingFlow.Application.Features.Invoices.Commands.GenerateInvoice;
 public class GenerateInvoiceHandler(
     IApplicationDbContext context,
     IInvoiceNumberGenerator numberGenerator,
-    TimeProvider timeProvider) : IRequestHandler<GenerateInvoiceCommand, Guid>
+    TimeProvider timeProvider) : ICommandHandler<GenerateInvoiceCommand, Guid>
 {
-    public async Task<Guid> Handle(GenerateInvoiceCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> Handle(GenerateInvoiceCommand request, CancellationToken cancellationToken)
     {
         // 1. Fetch Client status AND UserId enforcing soft-delete awareness
         var clientInfo = await context.Clients
@@ -31,13 +30,13 @@ public class GenerateInvoiceHandler(
 
         if (clientInfo is null)
         {
-            throw new NotFoundException("Client profile could not be found.");
+            return Result.Failure<Guid>(Errors.Clients.NotFound(request.ClientId));
         }
 
         // Business Rule: Suspended or Archived clients cannot have invoices processed
         if (clientInfo.Status != ClientStatus.Active)
         {
-            throw new ForbiddenException("Cannot generate invoices for suspended or archived billing profiles.");
+            return Result.Failure<Guid>(Errors.Invoices.ClientNotActive);
         }
 
         // 2. Query all un-billed provided services within the given time matrix
@@ -50,7 +49,7 @@ public class GenerateInvoiceHandler(
 
         if (!unbilledServices.Any())
         {
-            throw new DomainException("No unbilled provided services found for the specified period.");
+            return Result.Failure<Guid>(Errors.Invoices.NoUnbilledServices);
         }
 
         // 3. Obtain a legal sequence invoice number
@@ -77,6 +76,6 @@ public class GenerateInvoiceHandler(
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(cancellationToken);
 
-        return invoice.Id;
+        return Result.Success(invoice.Id);
     }
 }

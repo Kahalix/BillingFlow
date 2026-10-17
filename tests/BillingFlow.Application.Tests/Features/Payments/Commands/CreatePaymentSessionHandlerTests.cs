@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
 using BillingFlow.Application.Features.Payments.Commands.CreatePaymentSession;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Application.Tests.Helpers;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
-using BillingFlow.Domain.Exceptions;
 
 using FluentAssertions;
 
@@ -59,12 +58,15 @@ public class CreatePaymentSessionHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.CheckoutUrl.Should().Be("https://checkout.stripe.com/123");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value.CheckoutUrl.Should().Be("https://checkout.stripe.com/123");
+        
         _stripeServiceMock.Verify(s => s.CreateCheckoutSessionAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WhenInvoiceIsDraft_ShouldThrowForbiddenException()
+    public async Task Handle_WhenInvoiceIsDraft_ShouldReturnInvoiceNotActiveError()
     {
         // Arrange
         var invoiceId = Guid.NewGuid();
@@ -75,10 +77,11 @@ public class CreatePaymentSessionHandlerTests
         _dbContextMock.Setup(c => c.PaymentAttempts).Returns(new List<PaymentAttempt>().BuildMockDbSet().Object);
         _dbContextMock.Setup(c => c.Invoices).Returns(new List<Invoice> { invoice }.BuildMockDbSet().Object);
 
-        // Act & Assert
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
 
-        await action.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("Payment sessions can only be created for active, unpaid invoices.");
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Payments.InvoiceNotActive);
     }
 }

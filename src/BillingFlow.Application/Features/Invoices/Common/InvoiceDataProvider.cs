@@ -2,16 +2,19 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BillingFlow.Application.Common.Exceptions;
+
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Features.Invoices.Common.Models;
 using BillingFlow.Application.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Invoices.Common;
 
 public class InvoiceDataProvider(IApplicationDbContext context) : IInvoiceDataProvider
 {
-    public async Task<InvoiceDetailsModel> GetInvoiceDetailsAsync(Guid invoiceId, CancellationToken cancellationToken)
+    public async Task<Result<InvoiceDetailsModel>> GetInvoiceDetailsAsync(Guid invoiceId, CancellationToken cancellationToken)
     {
         // 1. Fetch Header & Client Details
         var header = await (from invoice in context.Invoices.AsNoTracking()
@@ -33,7 +36,9 @@ public class InvoiceDataProvider(IApplicationDbContext context) : IInvoiceDataPr
                             .SingleOrDefaultAsync(cancellationToken);
 
         if (header is null)
-            throw new NotFoundException($"Invoice with ID {invoiceId} could not be found.");
+        {
+            return Result.Failure<InvoiceDetailsModel>(Errors.Invoices.NotFound(invoiceId));
+        }
 
         // 2. Fetch Line Items
         var items = await context.InvoiceItems.AsNoTracking()
@@ -47,7 +52,7 @@ public class InvoiceDataProvider(IApplicationDbContext context) : IInvoiceDataPr
             .ToListAsync(cancellationToken);
 
         // 3. Compose Final Payload
-        return new InvoiceDetailsModel(
+        return Result.Success(new InvoiceDetailsModel(
             header.Id,
             header.InvoiceNumber,
             new InvoiceClientModel(header.ClientId, header.CompanyName, header.TaxId),
@@ -57,6 +62,6 @@ public class InvoiceDataProvider(IApplicationDbContext context) : IInvoiceDataPr
             header.DueDate,
             header.Status,
             items
-        );
+        ));
     }
 }

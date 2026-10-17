@@ -2,11 +2,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Application.Common.Models;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -14,9 +14,9 @@ namespace BillingFlow.Application.Features.Payments.Queries.GetPayments;
 
 public class GetPaymentsHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService) : IRequestHandler<GetPaymentsQuery, PaginatedList<PaymentSummaryDto>>
+    ICurrentUserService currentUserService) : IQueryHandler<GetPaymentsQuery, PaginatedList<PaymentSummaryDto>>
 {
-    public async Task<PaginatedList<PaymentSummaryDto>> Handle(GetPaymentsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedList<PaymentSummaryDto>>> Handle(GetPaymentsQuery request, CancellationToken cancellationToken)
     {
         // 1. Base Query with JOIN for context and security
         var query = from payment in context.Payments.AsNoTracking()
@@ -67,7 +67,9 @@ public class GetPaymentsHandler(
             ));
 
         // 6. Pagination Execution
-        return await PaginatedList<PaymentSummaryDto>.CreateAsync(
+        var paginatedResult = await PaginatedList<PaymentSummaryDto>.CreateAsync(
             projectedQuery, request.PageNumber, request.PageSize, cancellationToken);
+
+        return Result.Success(paginatedResult);
     }
 }

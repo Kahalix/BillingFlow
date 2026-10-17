@@ -1,6 +1,5 @@
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Clients.Queries.GetClientDetails;
 
@@ -8,4 +7,4 @@ namespace BillingFlow.Application.Features.Clients.Queries.GetClientDetails;
 /// Retrieves the full profile details of a specific billing client by ID.
 /// Intended for back-office employees.
 /// </summary>
-public record GetClientDetailsQuery(Guid ClientId) : IRequest<ClientDetailsResponse>, IRequirePermission;
+public record GetClientDetailsQuery(Guid ClientId) : IQuery<ClientDetailsResponse>, IRequirePermission;

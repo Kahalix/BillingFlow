@@ -1,7 +1,11 @@
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 
-using MediatR;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BillingFlow.Application.Features.Identity.Commands.RegisterUser;
 
@@ -13,9 +17,9 @@ public class RegisterUserHandler(
     IApplicationDbContext context,
     IPasswordHasher passwordHasher,
     TimeProvider timeProvider)
-    : IRequestHandler<RegisterUserCommand, Guid>
+    : ICommandHandler<RegisterUserCommand, Guid>
 {
-    public async Task<Guid> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
         var passwordHash = passwordHasher.HashPassword(request.Password);
 
@@ -29,6 +33,6 @@ public class RegisterUserHandler(
         context.Users.Add(user);
         await context.SaveChangesAsync(cancellationToken);
 
-        return user.Id;
+        return Result.Success(user.Id);
     }
 }

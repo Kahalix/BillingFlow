@@ -1,16 +1,16 @@
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Application.Common.Models;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Identity.Queries.GetUsers;
 
 public class GetUsersHandler(IApplicationDbContext context)
-    : IRequestHandler<GetUsersQuery, PaginatedList<UserSummaryDto>>
+    : IQueryHandler<GetUsersQuery, PaginatedList<UserSummaryDto>>
 {
-    public async Task<PaginatedList<UserSummaryDto>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedList<UserSummaryDto>>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
         // 1. Start with an untracked queryable
         var query = context.Users.AsNoTracking();
@@ -39,10 +39,12 @@ public class GetUsersHandler(IApplicationDbContext context)
                 u.CreatedAt));
 
         // 4. Execute pagination
-        return await PaginatedList<UserSummaryDto>.CreateAsync(
+        var paginatedList = await PaginatedList<UserSummaryDto>.CreateAsync(
             projectedQuery,
             request.PageNumber,
             request.PageSize,
             cancellationToken);
+
+        return Result.Success(paginatedList);
     }
 }

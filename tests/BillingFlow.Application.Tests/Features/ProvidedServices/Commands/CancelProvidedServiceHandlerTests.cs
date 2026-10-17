@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
 using BillingFlow.Application.Features.ProvidedServices.Commands.CancelProvidedService;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Application.Tests.Helpers;
@@ -32,6 +32,25 @@ public class CancelProvidedServiceHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenServiceDoesNotExist_ShouldReturnNotFoundError()
+    {
+        // Arrange
+        var serviceId = Guid.NewGuid();
+        var command = new CancelProvidedServiceCommand(serviceId);
+
+        _dbContextMock.Setup(c => c.ProvidedServices)
+            .Returns(new List<ProvidedService>().BuildMockDbSet().Object);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.ProvidedServices.NotFound(serviceId));
+        _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WhenServiceExists_ShouldMutateStateAndSaveChanges()
     {
         // Arrange
@@ -43,10 +62,12 @@ public class CancelProvidedServiceHandlerTests
             .Returns(new List<ProvidedService> { service }.BuildMockDbSet().Object);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert - Ensures the Domain entity was mutated and context saved
+        // Assert
+        result.IsSuccess.Should().BeTrue();
         service.Status.Should().Be(ProvidedServiceStatus.Canceled);
+
         _dbContextMock.Verify(c => c.ProvidedServices.Remove(It.IsAny<ProvidedService>()), Times.Never);
         _dbContextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

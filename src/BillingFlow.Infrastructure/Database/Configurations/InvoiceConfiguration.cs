@@ -41,9 +41,16 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.HasMany(i => i.Items)
             .WithOne()
             .HasForeignKey(i => i.InvoiceId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
-        // 4. Concurrency Token
+        // 4. ENFORCED RELATIONSHIP: Matches FK_Invoices_Clients_ClientId (Rule.None)
+        // Hard deleting a client is blocked to preserve financial audit trails.
+        builder.HasOne<Client>()
+            .WithMany()
+            .HasForeignKey(i => i.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // 5. Concurrency Token
         builder.Property(i => i.RowVersion)
             .IsRowVersion();
     }

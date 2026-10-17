@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
 using BillingFlow.Application.Features.Invoices.Commands.GenerateInvoice;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Application.Tests.Helpers;
 using BillingFlow.Domain.Entities;
-using BillingFlow.Domain.Exceptions;
 
 using FluentAssertions;
 
@@ -40,7 +40,7 @@ public class GenerateInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenClientIsArchived_ShouldThrowForbiddenException()
+    public async Task Handle_WhenClientIsArchived_ShouldReturnClientNotActiveError()
     {
         // Arrange
         var clientId = Guid.NewGuid();
@@ -51,15 +51,16 @@ public class GenerateInvoiceHandlerTests
         _dbContextMock.Setup(c => c.Clients)
             .Returns(new List<Client> { archivedClient }.BuildMockDbSet().Object);
 
-        // Act & Assert
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
 
-        await action.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("Cannot generate invoices for suspended or archived billing profiles.");
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Invoices.ClientNotActive);
     }
 
     [Fact]
-    public async Task Handle_WhenNoUnbilledServices_ShouldThrowDomainException()
+    public async Task Handle_WhenNoUnbilledServices_ShouldReturnNoUnbilledServicesError()
     {
         // Arrange
         var clientId = Guid.NewGuid();
@@ -74,10 +75,11 @@ public class GenerateInvoiceHandlerTests
         _dbContextMock.Setup(c => c.ProvidedServices)
             .Returns(new List<ProvidedService>().BuildMockDbSet().Object);
 
-        // Act & Assert
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
 
-        await action.Should().ThrowAsync<DomainException>()
-            .WithMessage("No unbilled provided services found for the specified period.");
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Invoices.NoUnbilledServices);
     }
 }

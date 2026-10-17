@@ -1,9 +1,8 @@
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 namespace BillingFlow.Application.Features.Payments.Commands.CreateManualPayment;
 
@@ -13,4 +12,4 @@ public record CreateManualPaymentCommand(
     PaymentMethod Method,
     DateTimeOffset PaymentDate,
     string? Notes
-) : IRequest<Guid>, IRequirePermission;
+) : ICommand<Guid>, IRequirePermission;

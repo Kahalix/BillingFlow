@@ -5,18 +5,18 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 
 using Dapper;
 
-using MediatR;
-
 namespace BillingFlow.Application.Features.Reports.Queries.GetMonthlyRevenue;
 
 public class GetMonthlyRevenueHandler(IDbConnectionFactory connectionFactory)
-    : IRequestHandler<GetMonthlyRevenueQuery, IReadOnlyCollection<MonthlyRevenueDto>>
+    : IQueryHandler<GetMonthlyRevenueQuery, IReadOnlyCollection<MonthlyRevenueDto>>
 {
-    public async Task<IReadOnlyCollection<MonthlyRevenueDto>> Handle(GetMonthlyRevenueQuery request, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyCollection<MonthlyRevenueDto>>> Handle(GetMonthlyRevenueQuery request, CancellationToken cancellationToken)
     {
         // 1. Calculate safe, UTC-based Date Boundaries
         var startDate = new DateTimeOffset(request.Year, request.Month, 1, 0, 0, 0, TimeSpan.Zero);
@@ -35,6 +35,6 @@ public class GetMonthlyRevenueHandler(IDbConnectionFactory connectionFactory)
 
         var result = await connection.QueryAsync<MonthlyRevenueDto>(command);
 
-        return result.ToList().AsReadOnly();
+        return Result.Success<IReadOnlyCollection<MonthlyRevenueDto>>(result.ToList().AsReadOnly());
     }
 }

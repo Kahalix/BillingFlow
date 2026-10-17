@@ -1,19 +1,18 @@
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
-using BillingFlow.Domain.Exceptions;
 using BillingFlow.Domain.ValueObjects;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Clients.Commands.CreateClient;
 
 public class CreateClientHandler(IApplicationDbContext context)
-    : IRequestHandler<CreateClientCommand, CreateClientResponse>
+    : ICommandHandler<CreateClientCommand, CreateClientResponse>
 {
-    public async Task<CreateClientResponse> Handle(CreateClientCommand request, CancellationToken cancellationToken)
+    public async Task<Result<CreateClientResponse>> Handle(CreateClientCommand request, CancellationToken cancellationToken)
     {
         // 1. Enforce 1:1 relationship invariant (One AppUser = One Client Profile)
         if (request.UserId.HasValue)
@@ -21,7 +20,7 @@ public class CreateClientHandler(IApplicationDbContext context)
             var userExists = await context.Users.AnyAsync(u => u.Id == request.UserId.Value, cancellationToken);
             if (!userExists)
             {
-                throw new NotFoundException("The specified User ID does not exist.");
+                return Result.Failure<CreateClientResponse>(Errors.Users.NotFound(request.UserId.Value));
             }
 
             var clientAlreadyLinked = await context.Clients
@@ -29,7 +28,7 @@ public class CreateClientHandler(IApplicationDbContext context)
 
             if (clientAlreadyLinked)
             {
-                throw new DomainException("This user is already linked to another client profile.");
+                return Result.Failure<CreateClientResponse>(Errors.Clients.UserAlreadyLinked);
             }
         }
 
@@ -53,6 +52,6 @@ public class CreateClientHandler(IApplicationDbContext context)
         context.Clients.Add(client);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new CreateClientResponse(client.Id);
+        return Result.Success(new CreateClientResponse(client.Id));
     }
 }

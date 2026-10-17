@@ -3,12 +3,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -16,9 +16,9 @@ namespace BillingFlow.Application.Features.ProvidedServices.Commands.AddProvided
 
 public class AddProvidedServiceHandler(
     IApplicationDbContext context,
-    TimeProvider timeProvider) : IRequestHandler<AddProvidedServiceCommand, Guid>
+    TimeProvider timeProvider) : ICommandHandler<AddProvidedServiceCommand, Guid>
 {
-    public async Task<Guid> Handle(AddProvidedServiceCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> Handle(AddProvidedServiceCommand request, CancellationToken cancellationToken)
     {
         // 1. Verify Client exists and is capable of receiving new billable services
         // IGNORE QUERY FILTERS: We want to explicitly catch Archived clients and throw Forbidden, not NotFound.
@@ -30,12 +30,12 @@ public class AddProvidedServiceHandler(
 
         if (clientStatus is null)
         {
-            throw new NotFoundException("Client profile could not be found.");
+            return Result.Failure<Guid>(Errors.Clients.NotFound(request.ClientId));
         }
 
         if (clientStatus != ClientStatus.Active)
         {
-            throw new ForbiddenException("Cannot add billable services to a suspended or archived client.");
+            return Result.Failure<Guid>(Errors.ProvidedServices.ClientNotActive);
         }
 
         // 2. Delegate to Domain Factory
@@ -52,6 +52,6 @@ public class AddProvidedServiceHandler(
         context.ProvidedServices.Add(service);
         await context.SaveChangesAsync(cancellationToken);
 
-        return service.Id;
+        return Result.Success(service.Id);
     }
 }

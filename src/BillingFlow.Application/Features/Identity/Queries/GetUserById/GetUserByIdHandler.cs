@@ -1,16 +1,20 @@
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 
-using MediatR;
-
 using Microsoft.EntityFrameworkCore;
+
+using System.Threading;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace BillingFlow.Application.Features.Identity.Queries.GetUserById;
 
 public class GetUserByIdHandler(IApplicationDbContext context)
-    : IRequestHandler<GetUserByIdQuery, UserDetailsDto>
+    : IQueryHandler<GetUserByIdQuery, UserDetailsDto>
 {
-    public async Task<UserDetailsDto> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
+    public async Task<Result<UserDetailsDto>> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
     {
         var user = await context.Users
             .AsNoTracking()
@@ -27,9 +31,9 @@ public class GetUserByIdHandler(IApplicationDbContext context)
 
         if (user is null)
         {
-            throw new NotFoundException("User not found.");
+            return Result.Failure<UserDetailsDto>(Errors.Users.NotFound(request.UserId));
         }
 
-        return user;
+        return Result.Success(user);
     }
 }

@@ -1,15 +1,15 @@
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingFlow.Application.Features.Clients.Commands.ArchiveClient;
 
-public class ArchiveClientHandler(IApplicationDbContext context) : IRequestHandler<ArchiveClientCommand>
+public class ArchiveClientHandler(IApplicationDbContext context) : ICommandHandler<ArchiveClientCommand>
 {
-    public async Task Handle(ArchiveClientCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(ArchiveClientCommand request, CancellationToken cancellationToken)
     {
         // We use IgnoreQueryFilters() in case we need to process an already archived client 
         // without throwing a misleading 404 NotFound error.
@@ -19,12 +19,14 @@ public class ArchiveClientHandler(IApplicationDbContext context) : IRequestHandl
 
         if (client is null)
         {
-            throw new NotFoundException("Client profile could not be found.");
+            return Result.Failure(Errors.Clients.NotFound(request.ClientId));
         }
 
         // Domain handles state transition and registers ClientArchivedEvent
         client.Archive();
 
         await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 }

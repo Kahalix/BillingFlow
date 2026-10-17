@@ -2,14 +2,14 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Features.Identity.Commands.LoginUser;
 using BillingFlow.Application.Identity;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Entities;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -22,13 +22,13 @@ public class RefreshSessionHandler(
     ITokenHashService tokenHashService,
     ISessionCacheService sessionCacheService,
     IOptions<IdentityOptions> options,
-    TimeProvider timeProvider) : IRequestHandler<RefreshSessionCommand, AuthTokensResponse>
+    TimeProvider timeProvider) : ICommandHandler<RefreshSessionCommand, AuthTokensResponse>
 {
     private readonly IdentityOptions _options = options.Value;
     // Throttling prevents database write-amplification caused by rapid token rotations
     private static readonly TimeSpan ActivityUpdateThreshold = TimeSpan.FromMinutes(5);
 
-    public async Task<AuthTokensResponse> Handle(RefreshSessionCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AuthTokensResponse>> Handle(RefreshSessionCommand request, CancellationToken cancellationToken)
     {
         var incomingHash = tokenHashService.HashToken(request.RefreshToken);
         var now = timeProvider.GetUtcNow();
@@ -37,13 +37,17 @@ public class RefreshSessionHandler(
             .SingleOrDefaultAsync(t => t.TokenHash == incomingHash && t.Type == UserTokenType.RefreshToken, cancellationToken);
 
         if (existingToken is null || existingToken.SessionId is null)
-            throw new UnauthorizedException("Invalid refresh token.");
+        {
+            return Result.Failure<AuthTokensResponse>(Errors.Auth.InvalidRefreshToken);
+        }
 
         var session = await context.UserSessions.SingleOrDefaultAsync(s => s.Id == existingToken.SessionId, cancellationToken);
         var user = await context.Users.SingleOrDefaultAsync(u => u.Id == existingToken.UserId, cancellationToken);
 
         if (session is null || user is null || user.Status != UserStatus.Active)
-            throw new ForbiddenException("Invalid or suspended account context.");
+        {
+            return Result.Failure<AuthTokensResponse>(Errors.Users.Suspended);
+        }
 
         // Replay Attack Mitigation: Token was already consumed
         if (!existingToken.IsActive(now))
@@ -55,11 +59,13 @@ public class RefreshSessionHandler(
             // Real-time eviction from distributed cache across all nodes
             await sessionCacheService.InvalidateSessionAsync(session.Id, cancellationToken);
 
-            throw new UnauthorizedException("Session compromise detected. The session has been revoked.");
+            return Result.Failure<AuthTokensResponse>(Errors.Auth.SessionCompromised);
         }
 
         if (!session.IsActive(now))
-            throw new UnauthorizedException("This session has expired or been revoked.");
+        {
+            return Result.Failure<AuthTokensResponse>(Errors.Auth.SessionExpired);
+        }
 
         existingToken.MarkAsConsumed(now);
 
@@ -94,9 +100,9 @@ public class RefreshSessionHandler(
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw new UnauthorizedException("Concurrent session modification detected. Please log in again.");
+            return Result.Failure<AuthTokensResponse>(Errors.Auth.ConcurrentModification);
         }
 
-        return new AuthTokensResponse(newAccessToken, newRefreshTokenString, refreshTokenExpiry);
+        return Result.Success(new AuthTokensResponse(newAccessToken, newRefreshTokenString, refreshTokenExpiry));
     }
 }

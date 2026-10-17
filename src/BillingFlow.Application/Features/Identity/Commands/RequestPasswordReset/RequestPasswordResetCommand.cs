@@ -1,6 +1,5 @@
 using BillingFlow.Application.Authorization.Requirements;
-
-using MediatR;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Identity.Commands.RequestPasswordReset;
 
@@ -8,4 +7,4 @@ namespace BillingFlow.Application.Features.Identity.Commands.RequestPasswordRese
 /// Initiates the password recovery process. 
 /// Always returns success to prevent user enumeration attacks.
 /// </summary>
-public record RequestPasswordResetCommand(string Email) : IRequest, IPublicRequest;
+public record RequestPasswordResetCommand(string Email) : ICommand, IPublicRequest;

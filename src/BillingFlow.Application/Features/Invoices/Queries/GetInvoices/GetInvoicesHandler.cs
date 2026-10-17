@@ -2,11 +2,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Application.Common.Models;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -14,9 +14,9 @@ namespace BillingFlow.Application.Features.Invoices.Queries.GetInvoices;
 
 public class GetInvoicesHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService) : IRequestHandler<GetInvoicesQuery, PaginatedList<InvoiceSummaryDto>>
+    ICurrentUserService currentUserService) : IQueryHandler<GetInvoicesQuery, PaginatedList<InvoiceSummaryDto>>
 {
-    public async Task<PaginatedList<InvoiceSummaryDto>> Handle(GetInvoicesQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedList<InvoiceSummaryDto>>> Handle(GetInvoicesQuery request, CancellationToken cancellationToken)
     {
         var query = from invoice in context.Invoices.AsNoTracking()
                     join client in context.Clients.IgnoreQueryFilters() on invoice.ClientId equals client.Id
@@ -49,7 +49,9 @@ public class GetInvoicesHandler(
                 x.invoice.IssueDate, x.invoice.DueDate, x.invoice.Status
             ));
 
-        return await PaginatedList<InvoiceSummaryDto>.CreateAsync(
+        var paginatedResult = await PaginatedList<InvoiceSummaryDto>.CreateAsync(
             projectedQuery, request.PageNumber, request.PageSize, cancellationToken);
+
+        return Result.Success(paginatedResult);
     }
 }

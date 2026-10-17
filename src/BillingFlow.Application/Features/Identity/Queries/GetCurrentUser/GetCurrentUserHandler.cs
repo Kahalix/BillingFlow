@@ -1,7 +1,7 @@
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -10,9 +10,9 @@ namespace BillingFlow.Application.Features.Identity.Queries.GetCurrentUser;
 public class GetCurrentUserHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService)
-    : IRequestHandler<GetCurrentUserQuery, CurrentUserProfileDto>
+    : IQueryHandler<GetCurrentUserQuery, CurrentUserProfileDto>
 {
-    public async Task<CurrentUserProfileDto> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
+    public async Task<Result<CurrentUserProfileDto>> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
     {
         var userId = currentUserService.UserId;
 
@@ -31,9 +31,9 @@ public class GetCurrentUserHandler(
 
         if (user is null)
         {
-            throw new NotFoundException("Current user profile could not be found.");
+            return Result.Failure<CurrentUserProfileDto>(Errors.Auth.InvalidSession);
         }
 
-        return user;
+        return Result.Success(user);
     }
 }

@@ -2,11 +2,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Application.Common.Models;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -14,9 +14,9 @@ namespace BillingFlow.Application.Features.ProvidedServices.Queries.GetProvidedS
 
 public class GetProvidedServicesHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService) : IRequestHandler<GetProvidedServicesQuery, PaginatedList<ProvidedServiceSummaryDto>>
+    ICurrentUserService currentUserService) : IQueryHandler<GetProvidedServicesQuery, PaginatedList<ProvidedServiceSummaryDto>>
 {
-    public async Task<PaginatedList<ProvidedServiceSummaryDto>> Handle(GetProvidedServicesQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedList<ProvidedServiceSummaryDto>>> Handle(GetProvidedServicesQuery request, CancellationToken cancellationToken)
     {
         var query = from service in context.ProvidedServices.AsNoTracking()
                     join client in context.Clients.IgnoreQueryFilters() on service.ClientId equals client.Id
@@ -54,7 +54,9 @@ public class GetProvidedServicesHandler(
                 x.service.Status
             ));
 
-        return await PaginatedList<ProvidedServiceSummaryDto>.CreateAsync(
+        var paginatedResult = await PaginatedList<ProvidedServiceSummaryDto>.CreateAsync(
             projectedQuery, request.PageNumber, request.PageSize, cancellationToken);
+
+        return Result.Success(paginatedResult);
     }
 }

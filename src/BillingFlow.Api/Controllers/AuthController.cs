@@ -21,7 +21,7 @@ namespace BillingFlow.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(ISender sender) : ControllerBase
+public class AuthController(ISender sender) : ApiControllerBase
 {
     /// <summary>
     /// Provisions a new system user. 
@@ -37,12 +37,12 @@ public class AuthController(ISender sender) : ControllerBase
         [FromBody] RegisterUserCommand command,
         CancellationToken cancellationToken)
     {
-        var userId = await sender.Send(command, cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
-        return CreatedAtRoute(
+        return HandleResult(result, userId => CreatedAtRoute(
              routeName: "GetUserById",
              routeValues: new { id = userId },
-             value: new RegisterUserResponse(userId));
+             value: new RegisterUserResponse(userId)));
     }
 
     /// <summary>
@@ -58,8 +58,9 @@ public class AuthController(ISender sender) : ControllerBase
         [FromBody] LoginUserCommand command,
         CancellationToken cancellationToken)
     {
-        var tokens = await sender.Send(command, cancellationToken);
-        return Ok(tokens);
+        var result = await sender.Send(command, cancellationToken);
+
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -70,12 +71,14 @@ public class AuthController(ISender sender) : ControllerBase
     [ProducesResponseType(typeof(AuthTokensResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Refresh(
         [FromBody] RefreshSessionCommand command,
         CancellationToken cancellationToken)
     {
-        var tokens = await sender.Send(command, cancellationToken);
-        return Ok(tokens);
+        var result = await sender.Send(command, cancellationToken);
+
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -88,8 +91,9 @@ public class AuthController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        await sender.Send(new LogoutCommand(), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new LogoutCommand(), cancellationToken);
+
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -102,8 +106,9 @@ public class AuthController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> LogoutAllDevices(CancellationToken cancellationToken)
     {
-        await sender.Send(new LogoutAllDevicesCommand(), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new LogoutAllDevicesCommand(), cancellationToken);
+
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -119,10 +124,9 @@ public class AuthController(ISender sender) : ControllerBase
         [FromBody] RequestPasswordResetCommand command,
         CancellationToken cancellationToken)
     {
-        await sender.Send(command, cancellationToken);
-        // Zwracamy 202 Accepted, co oznacza "przyjęliśmy żądanie do przetworzenia",
-        // co jeszcze mocniej maskuje fakt, czy użytkownik istnieje w bazie.
-        return Accepted();
+        var result = await sender.Send(command, cancellationToken);
+
+        return HandleResult(result, () => Accepted());
     }
 
     /// <summary>
@@ -138,8 +142,9 @@ public class AuthController(ISender sender) : ControllerBase
         [FromBody] ResetPasswordCommand command,
         CancellationToken cancellationToken)
     {
-        await sender.Send(command, cancellationToken);
-        return NoContent();
+        var result = await sender.Send(command, cancellationToken);
+
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -155,7 +160,8 @@ public class AuthController(ISender sender) : ControllerBase
         [FromBody] ConfirmEmailChangeCommand command,
         CancellationToken cancellationToken)
     {
-        await sender.Send(command, cancellationToken);
-        return NoContent();
+        var result = await sender.Send(command, cancellationToken);
+
+        return HandleResult(result);
     }
 }

@@ -20,14 +20,28 @@ public class ProvidedServiceConfiguration : IEntityTypeConfiguration<ProvidedSer
             .HasColumnType("decimal(18,2)")
             .IsRequired();
 
+        builder.Property(ps => ps.PerformedAt)
+            .IsRequired();
+
+        builder.Property(ps => ps.BilledAt)
+            .IsRequired(false);
+
         builder.Property(ps => ps.Status)
             .IsRequired();
 
         builder.HasIndex(ps => ps.ClientId);
-
         builder.HasIndex(ps => ps.InvoiceId);
-
-        // Optimizes lookups for services in a specific state
         builder.HasIndex(ps => ps.Status);
+
+        builder.HasOne<Client>()
+            .WithMany()
+            .HasForeignKey(ps => ps.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Invoice>()
+            .WithMany()
+            .HasForeignKey(ps => ps.InvoiceId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

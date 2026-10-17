@@ -20,7 +20,7 @@ namespace BillingFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProvidedServicesController(ISender sender) : ControllerBase
+public class ProvidedServicesController(ISender sender) : ApiControllerBase
 {
     /// <summary>
     /// Retrieves a paginated list of provided services.
@@ -36,7 +36,7 @@ public class ProvidedServicesController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(query, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -54,7 +54,7 @@ public class ProvidedServicesController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetProvidedServiceDetailsQuery(id), cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -79,8 +79,8 @@ public class ProvidedServicesController(ISender sender) : ControllerBase
             request.PerformedAt
         );
 
-        await sender.Send(command, cancellationToken);
-        return NoContent();
+        var result = await sender.Send(command, cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public class ProvidedServicesController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         // Executes the Soft-Delete Domain logic
-        await sender.Send(new CancelProvidedServiceCommand(id), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new CancelProvidedServiceCommand(id), cancellationToken);
+        return HandleResult(result);
     }
 }

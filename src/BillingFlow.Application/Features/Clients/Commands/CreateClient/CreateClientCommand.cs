@@ -1,6 +1,7 @@
-using BillingFlow.Application.Authorization.Requirements;
+using System;
 
-using MediatR;
+using BillingFlow.Application.Authorization.Requirements;
+using BillingFlow.Application.Common.Messaging;
 
 namespace BillingFlow.Application.Features.Clients.Commands.CreateClient;
 
@@ -12,4 +13,4 @@ public record CreateClientCommand(
     string City,
     string PostalCode,
     string Country
-) : IRequest<CreateClientResponse>, IRequirePermission;
+) : ICommand<CreateClientResponse>, IRequirePermission;

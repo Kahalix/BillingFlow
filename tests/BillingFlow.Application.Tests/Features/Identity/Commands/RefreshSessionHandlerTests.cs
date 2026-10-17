@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using BillingFlow.Application.Common.Exceptions;
+using BillingFlow.Application.Common.Errors;
 using BillingFlow.Application.Features.Identity.Commands.RefreshSession;
 using BillingFlow.Application.Identity;
 using BillingFlow.Application.Interfaces;
@@ -66,7 +66,7 @@ public class RefreshSessionHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenTokenDoesNotExist_ShouldThrowUnauthorizedException()
+    public async Task Handle_WhenTokenDoesNotExist_ShouldReturnInvalidRefreshTokenError()
     {
         // Arrange
         var command = new RefreshSessionCommand("invalid_raw_token");
@@ -74,15 +74,15 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken>().BuildMockDbSet().Object);
 
         // Act
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().ThrowAsync<UnauthorizedException>()
-            .WithMessage("Invalid refresh token.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Auth.InvalidRefreshToken);
     }
 
     [Fact]
-    public async Task Handle_WhenSessionIsMissing_ShouldThrowForbiddenException()
+    public async Task Handle_WhenSessionIsMissing_ShouldReturnSuspendedError()
     {
         // Arrange
         var command = new RefreshSessionCommand("valid_raw_token");
@@ -103,15 +103,15 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
 
         // Act
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("Invalid or suspended account context.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Users.Suspended);
     }
 
     [Fact]
-    public async Task Handle_WhenUserIsSuspended_ShouldThrowForbiddenException()
+    public async Task Handle_WhenUserIsSuspended_ShouldReturnSuspendedError()
     {
         // Arrange
         var command = new RefreshSessionCommand("valid_raw_token");
@@ -135,15 +135,15 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.Users).Returns(new List<AppUser> { user }.BuildMockDbSet().Object);
 
         // Act
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("Invalid or suspended account context.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Users.Suspended);
     }
 
     [Fact]
-    public async Task Handle_WhenTokenIsAlreadyConsumed_ShouldTriggerReplayMitigationAndThrow()
+    public async Task Handle_WhenTokenIsAlreadyConsumed_ShouldTriggerReplayMitigationAndReturnCompromisedError()
     {
         // Arrange
         var command = new RefreshSessionCommand("consumed_raw_token");
@@ -170,11 +170,11 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         // Act
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().ThrowAsync<UnauthorizedException>()
-            .WithMessage("Session compromise detected. The session has been revoked.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Auth.SessionCompromised);
 
         // Verify session revocation and cache eviction
         session.IsActive(_timeProvider.GetUtcNow()).Should().BeFalse();
@@ -183,11 +183,9 @@ public class RefreshSessionHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenRefreshTokenIsExpired_ShouldTriggerCompromiseAndThrow()
+    public async Task Handle_WhenRefreshTokenIsExpired_ShouldTriggerCompromiseAndReturnError()
     {
         // Arrange
-        // Current implementation treats expired and consumed refresh tokens identically.
-        // Both trigger session revocation because UserToken.IsActive() returns false in both scenarios.
         var command = new RefreshSessionCommand("expired_raw_token");
         var hashedToken = "hashed_expired_token";
 
@@ -215,18 +213,18 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         // Act
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().ThrowAsync<UnauthorizedException>()
-            .WithMessage("Session compromise detected. The session has been revoked.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Auth.SessionCompromised);
 
         session.IsActive(now).Should().BeFalse();
         _sessionCacheServiceMock.Verify(x => x.InvalidateSessionAsync(session.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_WhenSessionIsExpired_ShouldThrowUnauthorizedException()
+    public async Task Handle_WhenSessionIsExpired_ShouldReturnSessionExpiredError()
     {
         // Arrange
         var command = new RefreshSessionCommand("valid_raw_token");
@@ -248,15 +246,15 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.UserTokens).Returns(new List<UserToken> { token }.BuildMockDbSet().Object);
 
         // Act
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().ThrowAsync<UnauthorizedException>()
-            .WithMessage("This session has expired or been revoked.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Auth.SessionExpired);
     }
 
     [Fact]
-    public async Task Handle_WhenDatabaseThrowsConcurrencyException_ShouldTranslateToUnauthorizedException()
+    public async Task Handle_WhenDatabaseThrowsConcurrencyException_ShouldTranslateToConcurrentModificationError()
     {
         // Arrange
         var command = new RefreshSessionCommand("valid_raw_token");
@@ -288,11 +286,11 @@ public class RefreshSessionHandlerTests
             .ThrowsAsync(new DbUpdateConcurrencyException("Concurrency conflict"));
 
         // Act
-        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().ThrowAsync<UnauthorizedException>()
-            .WithMessage("Concurrent session modification detected. Please log in again.");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Errors.Auth.ConcurrentModification);
     }
 
     [Fact]
@@ -327,7 +325,9 @@ public class RefreshSessionHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().NotBeNull();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+
         token.IsActive(now).Should().BeFalse();
         session.ExpiresAt.Should().BeAfter(originalExpiresAt);
         session.LastSeenAt.Should().Be(now);
@@ -366,9 +366,10 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
         session.ExpiresAt.Should().BeAfter(originalExpiresAt);
         session.LastSeenAt.Should().Be(now);
     }
@@ -404,9 +405,10 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
         // Expiration and telemetry must remain exactly the same due to throttling
         session.ExpiresAt.Should().Be(originalExpiresAt);
         session.LastSeenAt.Should().NotBeNull();
@@ -443,9 +445,10 @@ public class RefreshSessionHandlerTests
         _dbContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
         session.LastSeenAt.Should().Be(now);
     }
 
@@ -484,10 +487,12 @@ public class RefreshSessionHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
+
         // Session RefreshActivity should try to add 7 days to Day 28 (Day 35), but cap at AbsoluteExpiry (Day 30)
         session.ExpiresAt.Should().Be(absoluteExpiry);
 
         // Application handler must also cap the Refresh Token to ensure it matches the hard session death
-        result.RefreshTokenExpiresAt.Should().Be(absoluteExpiry);
+        result.Value.RefreshTokenExpiresAt.Should().Be(absoluteExpiry);
     }
 }

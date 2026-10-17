@@ -21,9 +21,8 @@ namespace BillingFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class InvoicesController(ISender sender) : ControllerBase
+public class InvoicesController(ISender sender) : ApiControllerBase
 {
-
     /// <summary>
     /// Retrieves full details of a specific invoice including line items and client summary.
     /// Access is protected by ABAC: Customers can only view their own invoices.
@@ -39,7 +38,7 @@ public class InvoicesController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetInvoiceDetailsQuery(id), cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -56,7 +55,7 @@ public class InvoicesController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(query, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -72,8 +71,8 @@ public class InvoicesController(ISender sender) : ControllerBase
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new CancelInvoiceCommand(id), cancellationToken);
-        return NoContent();
+        var result = await sender.Send(new CancelInvoiceCommand(id), cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -97,9 +96,9 @@ public class InvoicesController(ISender sender) : ControllerBase
             request.ToDate
         );
 
-        var invoiceId = await sender.Send(command, cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
-        return Created(string.Empty, new { Id = invoiceId });
+        return HandleResult(result, invoiceId => Created(string.Empty, new { Id = invoiceId }));
     }
 
     /// <summary>
@@ -118,6 +117,6 @@ public class InvoicesController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(new DownloadInvoicePdfQuery(id), cancellationToken);
 
-        return File(result.Content, "application/pdf", result.FileName);
+        return HandleResult(result, pdf => File(pdf.Content, "application/pdf", pdf.FileName));
     }
 }

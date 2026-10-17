@@ -3,9 +3,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using BillingFlow.Application.Common.Messaging;
+using BillingFlow.Application.Common.Results;
 using BillingFlow.Application.Interfaces;
-
-using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -15,9 +15,9 @@ public class LogoutAllDevicesHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService,
     ISessionCacheService sessionCacheService,
-    TimeProvider timeProvider) : IRequestHandler<LogoutAllDevicesCommand>
+    TimeProvider timeProvider) : ICommandHandler<LogoutAllDevicesCommand>
 {
-    public async Task Handle(LogoutAllDevicesCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(LogoutAllDevicesCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId;
         var now = timeProvider.GetUtcNow();
@@ -28,7 +28,7 @@ public class LogoutAllDevicesHandler(
             .Where(s => s.UserId == currentUserId && s.RevokedAt == null && s.ExpiresAt > now)
             .ToListAsync(cancellationToken);
 
-        if (!activeSessions.Any()) return;
+        if (!activeSessions.Any()) return Result.Success();
 
         // 2. Revoke durably in the database
         foreach (var session in activeSessions)
@@ -43,5 +43,7 @@ public class LogoutAllDevicesHandler(
             activeSessions.Select(session =>
                 sessionCacheService.InvalidateSessionAsync(session.Id, cancellationToken))
         );
+
+        return Result.Success();
     }
 }

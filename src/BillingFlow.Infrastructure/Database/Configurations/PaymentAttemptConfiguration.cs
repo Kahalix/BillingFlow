@@ -34,5 +34,11 @@ public class PaymentAttemptConfiguration : IEntityTypeConfiguration<PaymentAttem
             .IsRequired();
 
         builder.Property(pa => pa.ErrorMessage).HasMaxLength(1000);
+
+        // Invoice: Rule.None
+        builder.HasOne<Invoice>()
+            .WithMany()
+            .HasForeignKey(pa => pa.InvoiceId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -1,9 +1,8 @@
 using System;
 
 using BillingFlow.Application.Authorization.Requirements;
+using BillingFlow.Application.Common.Messaging;
 using BillingFlow.Domain.Enums;
-
-using MediatR;
 
 namespace BillingFlow.Application.Features.Payments.Commands.ProcessPaymentCompleted;
 
@@ -11,4 +10,4 @@ public record ProcessPaymentCompletedCommand(
     string EventId,
     Guid InvoiceId,
     string ProviderReference,
-    PaymentMethod Method) : IRequest, IPublicRequest;
+    PaymentMethod Method) : ICommand, IPublicRequest;

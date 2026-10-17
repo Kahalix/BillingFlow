@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,9 +19,8 @@ namespace BillingFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PaymentsController(ISender sender) : ControllerBase
+public class PaymentsController(ISender sender) : ApiControllerBase
 {
-
     /// <summary>
     /// Retrieves a filtered, paginated list of payments. 
     /// Row-Level Security applies dynamically in the handler to ensure Customers only see their own payments.
@@ -35,7 +35,7 @@ public class PaymentsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(query, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public class PaymentsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(new GetPaymentDetailsQuery(id), cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -67,6 +67,8 @@ public class PaymentsController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> CreatePaymentSession(
         [FromBody] CreatePaymentSessionRequest request,
         CancellationToken cancellationToken)
@@ -78,7 +80,7 @@ public class PaymentsController(ISender sender) : ControllerBase
 
         var result = await sender.Send(command, cancellationToken);
 
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -104,12 +106,11 @@ public class PaymentsController(ISender sender) : ControllerBase
             request.PaymentDate,
             request.Notes);
 
-        var paymentId = await sender.Send(command, cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
-        return CreatedAtAction(
+        return HandleResult(result, paymentId => CreatedAtAction(
             actionName: nameof(GetPaymentDetails),
             routeValues: new { id = paymentId },
-            value: new PaymentCreatedResponse(paymentId));
+            value: new PaymentCreatedResponse(paymentId)));
     }
-
 }
